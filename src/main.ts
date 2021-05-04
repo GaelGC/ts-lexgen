@@ -15,8 +15,20 @@ abstract class RegexNode {
         return this._idx;
     }
 
-    public abstract toString(): string;
-    public abstract getNFA(idxGen: Sequence): [NFANode, NFANode];
+    abstract getNFA(idxGen: Sequence): [NFANode, NFANode];
+
+    public abstract __toString(visited: RegexNode[]): string;
+    
+    public _toString(visited: RegexNode[]): string {
+        if (visited.includes(this)) {
+            return "";
+        }
+        visited.push(this);
+        return this.__toString(visited);
+    }
+    public toString() {
+        return this._toString(new Array())
+    }
 }
 
 function getBytes(s: string) {
@@ -40,7 +52,7 @@ class LitteralNode extends RegexNode {
         return this._val;
     }
 
-    public toString(): string {
+    public __toString(visited: RegexNode[]): string {
         // Warning: \ should be the first value.
         const escapes = "\\+?*()|[].";
         var res = this.val;
@@ -55,7 +67,6 @@ class LitteralNode extends RegexNode {
         const firstNode = new NFANode(idxGen);
         var lastNode = firstNode;
         for (const c of bytes) {
-            console.log(this.val, c);
             var newNode = new NFANode(idxGen);
             lastNode.addTransition(newNode, c);
             lastNode = newNode;
@@ -70,10 +81,10 @@ class OrNode extends RegexNode {
         this.nodes = nodes;
     }
 
-    private nodes: RegexNode[];
+    protected nodes: RegexNode[];
 
-    public toString(): string {
-        return "(" + this.nodes.join("|") + ")";
+    public __toString(visited: RegexNode[]): string {
+        return "(" + this.nodes.map(x => x._toString(visited)).join("|") + ")";
     }
 
     public getNFA(idxGen: Sequence): [NFANode, NFANode] {
@@ -88,6 +99,15 @@ class OrNode extends RegexNode {
     }
 }
 
+class OptionalNode extends OrNode {
+    constructor(idxGen: Sequence, node: RegexNode) {
+        super(idxGen, node, new LitteralNode(idxGen, ""));
+    }
+    public __toString(visited: RegexNode[]): string {
+        return "(" + this.nodes[0]._toString(visited) + ")?";
+    }
+}
+
 class SeqNode extends RegexNode {
     constructor(idxGen: Sequence, ...nodes: RegexNode[]) {
         super(idxGen);
@@ -96,8 +116,8 @@ class SeqNode extends RegexNode {
 
     private nodes: RegexNode[];
 
-    public toString(): string {
-        return "(" + this.nodes.join("") + ")";
+    public __toString(visited: RegexNode[]): string {
+        return "(" + this.nodes.map(x => x._toString(visited)).join("") + ")";
     }
 
     public getNFA(idxGen: Sequence): [NFANode, NFANode] {
@@ -110,6 +130,42 @@ class SeqNode extends RegexNode {
         }
         return [firstNode, lastNode];
     }
+}
+
+class RepetitionNode extends RegexNode {
+    constructor(idxGen: Sequence, node: RegexNode) {
+        super(idxGen);
+        this.node = node;
+    }
+
+    private node: RegexNode;
+
+    public __toString(visited: RegexNode[]): string {
+        return "(" + this.node._toString(visited) + ")+";
+    }
+
+    public getNFA(idxGen: Sequence): [NFANode, NFANode] {
+        const [entry, exit] = this.node.getNFA(idxGen);
+        exit.addTransition(entry, null);
+        return [entry, exit];
+    }
+}
+
+class OneOrMoreNode extends RegexNode {
+    constructor(idxGen: Sequence, node: RegexNode) {
+        super(idxGen);
+        this.node = new OptionalNode(idxGen, new RepetitionNode(idxGen, node));
+    }
+
+    private node: RegexNode;
+
+    getNFA(idxGen: Sequence): [NFANode, NFANode] {
+        return this.node.getNFA(idxGen);
+    }
+    public __toString(visited: RegexNode[]): string {
+        return this.node._toString(visited);
+    }
+
 }
 
 class NFATransitions {
@@ -140,22 +196,29 @@ class NFANode {
         this.outputs.push(new NFATransitions(dest, char));
     }
 
-    public toString(): string {
+    private _toString(visited: NFANode[]): string {
+        if (visited.includes(this)) {
+            return "";
+        }
+        visited.push(this);
         var str = "";
         for (const next of this.outputs) {
             str += `${this.idx} -> ${next.dest.idx} [label=\"${next.char !== null ? String.fromCharCode(next.char) : 'ϵ'}\"]\n`;
         }
         for (const next of this.outputs) {
-            str += next.dest.toString();
+            str += next.dest._toString(visited);
         }
         return str;
+    }
+    public toString(): string {
+        return this._toString(new Array())
     }
 }
 
 const seq = new Sequence();
-const node = new OrNode(seq, new SeqNode(seq, new LitteralNode(seq, "a|+"),
-    new LitteralNode(seq, "fef")),
-    new LitteralNode(seq, "b"));
-console.log(node.toString());
-const nfa = node.getNFA(new Sequence());
+const _node = new OrNode(seq, new SeqNode(seq, new LitteralNode(seq, "a|+"),
+                                               new LitteralNode(seq, "fef")),
+                              new OneOrMoreNode(seq, new LitteralNode(seq, "b")));
+console.log(_node.toString());
+const nfa = _node.getNFA(new Sequence());
 console.log(nfa.toString());
