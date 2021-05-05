@@ -1,13 +1,13 @@
 import { Sequence } from "./main";
 
 class NFATransitions {
-    constructor(dest: NFANode, char: number | null) {
+    constructor(dest: NFANodeImpl, char: number | null) {
         this._char = char;
         this._dest = dest;
     }
 
-    private _dest: NFANode;
-    public get dest(): NFANode {
+    private _dest: NFANodeImpl;
+    public get dest(): NFANodeImpl {
         return this._dest;
     }
 
@@ -17,7 +17,7 @@ class NFATransitions {
     }
 };
 
-export class NFANode {
+class NFANodeImpl {
     constructor(idxGen: Sequence, out: boolean = false) {
         this.idx = idxGen.get();
         this.outputs = new Array();
@@ -26,11 +26,11 @@ export class NFANode {
     idx: number;
     outputs: NFATransitions[];
     out: boolean;
-    public addTransition(dest: NFANode, char: number | null) {
+    public addTransition(dest: NFANodeImpl, char: number | null) {
         this.outputs.push(new NFATransitions(dest, char));
     }
 
-    private _toString(visited: NFANode[]): string {
+    private _toString(visited: NFANodeImpl[]): string {
         if (visited.includes(this)) {
             return "";
         }
@@ -70,7 +70,7 @@ export class NFANode {
             empties = get_empties();
         }
     }
-    public fill_nodes(arr: NFANode[]) {
+    public fill_nodes(arr: NFANodeImpl[]) {
         if (arr.includes(this)) {
             return;
         }
@@ -80,10 +80,37 @@ export class NFANode {
         }
     }
     public remove_empty() {
-        var nodes: NFANode[] = new Array();
+        var nodes: NFANodeImpl[] = new Array();
         this.fill_nodes(nodes);
         for (const node of nodes) {
             node._remove_empty();
         }
+    }
+}
+
+export class NFANode {
+    constructor(idxGen: Sequence, out: boolean = false) {
+        this.node = new NFANodeImpl(idxGen, out);
+    }
+    public setOut() {
+        this.node.out = true;
+    }
+    public addTransition(dest: NFANode, char: number | null) {
+        this.node.addTransition(dest.node, char);
+    }
+    node: NFANodeImpl;
+}
+
+export class NFARoot {
+    entry: NFANodeImpl;
+
+    constructor(node: NFANode) {
+        this.entry = node.node;
+    }
+    public remove_empty() {
+        this.entry.remove_empty();
+    }
+    public toString(): string {
+        return this.entry.toString();
     }
 }

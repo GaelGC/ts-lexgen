@@ -1,5 +1,5 @@
 import { Sequence } from "./main";
-import { NFANode } from "./NFA";
+import { NFANode, NFARoot } from "./NFA";
 
 export interface RegexNode {
     toString(): string;
@@ -158,12 +158,15 @@ export class MainNode implements RegexNode {
 
     private node: RegexNode;
 
-    getNFA(idxGen: Sequence): [NFANode, NFANode] {
+    getRootNFA(idxGen: Sequence): NFARoot {
         const nfa = this.node.getNFA(idxGen);
-        nfa[1].out = true;
-        return nfa;
+        nfa[1].setOut();
+        return new NFARoot(nfa[0]);
     }
     public toString(): string {
         return this.node.toString();
+    }
+    getNFA(idxGen: Sequence): [NFANode, NFANode] {
+        throw new Error("getRootNFA should be called here instead");
     }
 }
