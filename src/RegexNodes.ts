@@ -149,5 +149,21 @@ export class OneOrMoreNode implements RegexNode {
     public toString(): string {
         return this.node.toString();
     }
+}
 
+export class MainNode implements RegexNode {
+    constructor(node: RegexNode) {
+        this.node = node;
+    }
+
+    private node: RegexNode;
+
+    getNFA(idxGen: Sequence): [NFANode, NFANode] {
+        const nfa = this.node.getNFA(idxGen);
+        nfa[1].out = true;
+        return nfa;
+    }
+    public toString(): string {
+        return this.node.toString();
+    }
 }
