@@ -122,6 +122,22 @@ class NFANodeImpl {
         }
         return true;
     }
+    getNondeterministicNode(visited: NFANodeImpl[]): NFANodeImpl | null {
+        if (visited.includes(this)) {
+            return null;
+        }
+        visited.push(this);
+        if (!this.isDeterministicNode()) {
+            return this;
+        }
+        for (const transition of this.outputs) {
+            const nondeterministicNode = transition.dest.getNondeterministicNode(visited);
+            if (nondeterministicNode !== null) {
+                return nondeterministicNode;
+            }
+        }
+        return null;
+    }
 }
 
 export class NFANode {
@@ -138,11 +154,13 @@ export class NFANode {
 }
 
 export class NFARoot {
-    entry: NFANodeImpl;
-    dfa = false;
+    private entry: NFANodeImpl;
+    private dfa = false;
+    private idxGen: Sequence;
 
-    constructor(node: NFANode) {
+    constructor(idxGen: Sequence, node: NFANode) {
         this.entry = node.node;
+        this.idxGen = idxGen;
     }
     public remove_empty() {
         this.entry.remove_empty();
@@ -155,5 +173,39 @@ export class NFARoot {
             this.dfa = this.entry.isDFA(new Array());
         }
         return this.dfa;
+    }
+    public determinise() {
+        while (!this.isDFA()) {
+            const node = this.entry.getNondeterministicNode(new Array())!;
+            var transitions = new Map<number, NFATransitions[]>();
+            for (const transition of node.outputs) {
+                if (transition.char === null) {
+                    throw Error("Should not be called on an automata with spontaneous transitions");
+                }
+                if (!transitions.has(transition.char)) {
+                    transitions.set(transition.char, new Array());
+                }
+                transitions.get(transition.char)!.push(transition);
+            }
+            var transitionIterator = Array.from(transitions.entries());
+
+            for (const curTransition of transitionIterator) {
+                const [key, value] = curTransition;
+                if (value.length === 1) {
+                    continue;
+                }
+                const newState = new NFANodeImpl(this.idxGen);
+                for (const nextPossibleState of value) {
+                    for (const nextPossibleStateTransition of nextPossibleState.dest.outputs) {
+                        newState.addTransition(nextPossibleStateTransition.dest, nextPossibleStateTransition.char);
+                    }
+                    if (nextPossibleState.dest.out) {
+                        newState.out = true;
+                    }
+                    node.outputs.splice(node.outputs.indexOf(nextPossibleState), 1);
+                }
+                node.addTransition(newState, curTransition[0]);
+            }
+        }
     }
 }

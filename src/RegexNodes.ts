@@ -161,7 +161,7 @@ export class MainNode implements RegexNode {
     getRootNFA(idxGen: Sequence): NFARoot {
         const nfa = this.node.getNFA(idxGen);
         nfa[1].setOut();
-        return new NFARoot(nfa[0]);
+        return new NFARoot(idxGen, nfa[0]);
     }
     public toString(): string {
         return this.node.toString();
