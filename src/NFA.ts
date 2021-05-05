@@ -86,6 +86,42 @@ class NFANodeImpl {
             node._remove_empty();
         }
     }
+
+    public isDeterministicNode(): boolean {
+        var transitions: Number[] = new Array();
+        for (const transition of this.outputs) {
+            if (transition.char === null) {
+                return false;
+            }
+            if (transitions.includes(transition.char)) {
+                return false;
+            }
+            transitions.push(transition.char);
+        }
+        return true;
+    }
+
+    public isDFA(visited: NFANodeImpl[]): boolean {
+        if (visited.includes(this)) {
+            return true;
+        }
+        visited.push(this);
+        if (!this.isDeterministicNode()) {
+            return false;
+        }
+        var nextStages: NFANodeImpl[] = new Array();
+        for (const transition of this.outputs) {
+            if (!nextStages.includes(transition.dest)) {
+                nextStages.push(transition.dest);
+            }
+        }
+        for (const nextStage of nextStages) {
+            if (!nextStage.isDFA(visited)) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
 
 export class NFANode {
@@ -103,6 +139,7 @@ export class NFANode {
 
 export class NFARoot {
     entry: NFANodeImpl;
+    dfa = false;
 
     constructor(node: NFANode) {
         this.entry = node.node;
@@ -112,5 +149,11 @@ export class NFARoot {
     }
     public toString(): string {
         return this.entry.toString();
+    }
+    public isDFA(): boolean {
+        if (!this.dfa) {
+            this.dfa = this.entry.isDFA(new Array());
+        }
+        return this.dfa;
     }
 }

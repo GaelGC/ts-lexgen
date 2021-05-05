@@ -19,3 +19,7 @@ console.log();
 console.log();
 console.log();
 console.log(nfa.toString());
+console.log();
+console.log();
+console.log();
+console.log(nfa.isDFA());
