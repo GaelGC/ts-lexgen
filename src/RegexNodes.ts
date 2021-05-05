@@ -136,7 +136,7 @@ export class RepetitionNode implements RegexNode {
     }
 }
 
-export class OneOrMoreNode implements RegexNode {
+export class ZeroOrMoreNode implements RegexNode {
     constructor(node: RegexNode) {
         this.node = new OptionalNode(new RepetitionNode(node));
     }
@@ -147,8 +147,31 @@ export class OneOrMoreNode implements RegexNode {
         return this.node.getNFA(idxGen);
     }
     public toString(): string {
-        return this.node.toString();
+        return '(' + this.node.toString() + ')?';
     }
+}
+
+export class RangeNode implements RegexNode {
+    constructor(vals: string) {
+        const nodes: LitteralNode[] = new Array();
+        for (const c of vals) {
+            nodes.push(new LitteralNode(c));
+        }
+        this.node = new OrNode(...nodes);
+        this.vals = vals;
+    }
+
+    node: OrNode;
+    vals: string;
+
+    toString(): string {
+        // TODO: Handle special cases
+        return `[${Array.from(this.vals).join()}]`;
+    }
+    getNFA(idxGen: Sequence): [NFANode, NFANode] {
+        return this.node.getNFA(idxGen);
+    }
+
 }
 
 export class MainNode implements RegexNode {
@@ -160,7 +183,7 @@ export class MainNode implements RegexNode {
 
     getRootNFA(idxGen: Sequence): NFARoot {
         const nfa = this.node.getNFA(idxGen);
-        nfa[1].setOut();
+        nfa[1].setOut(0);
         return new NFARoot(idxGen, nfa[0]);
     }
     public toString(): string {

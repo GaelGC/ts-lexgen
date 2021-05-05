@@ -1,6 +1,10 @@
 import { Sequence } from "./main";
 import { getBytes } from "./RegexNodes";
 
+export class EOF {
+    private useless: undefined;
+}
+
 class NFATransitions {
     constructor(dest: NFANodeImpl, char: number | null) {
         this._char = char;
@@ -19,14 +23,14 @@ class NFATransitions {
 };
 
 class NFANodeImpl {
-    constructor(idxGen: Sequence, out: boolean = false) {
+    constructor(idxGen: Sequence, ruleIdx?: number) {
         this.idx = idxGen.get();
         this.outputs = new Array();
-        this.out = out;
+        this.ruleIdx = ruleIdx;
     }
     idx: number;
     outputs: NFATransitions[];
-    out: boolean;
+    ruleIdx: number | undefined;
     public addTransition(dest: NFANodeImpl, char: number | null) {
         this.outputs.push(new NFATransitions(dest, char));
     }
@@ -36,7 +40,7 @@ class NFANodeImpl {
             return "";
         }
         visited.push(this);
-        var str = `${this.idx} [shape="${this.out ? "doublecircle" : "circle"}"]`;
+        var str = `${this.idx} [shape="${this.ruleIdx !== undefined ? "doublecircle" : "circle"}"]`;
         for (const next of this.outputs) {
             str += `${this.idx} -> ${next.dest.idx} [label=\"${next.char !== null ? String.fromCharCode(next.char) : 'ϵ'}\"]\n`;
         }
@@ -58,8 +62,10 @@ class NFANodeImpl {
                 const index = this.outputs.indexOf(empty);
                 this.outputs.splice(index, 1);
                 const dest = empty.dest;
-                if (dest.out) {
-                    this.out = true;
+                if (dest.ruleIdx !== undefined) {
+                    if (this.ruleIdx === undefined || dest.ruleIdx < this.ruleIdx) {
+                        this.ruleIdx = dest.ruleIdx;
+                    }
                 }
                 for (const dest_dest of dest.outputs) {
                     if (this.outputs.find(x => x.char == dest_dest.char && x.dest == dest_dest.dest) === undefined) {
@@ -142,11 +148,11 @@ class NFANodeImpl {
 }
 
 export class NFANode {
-    constructor(idxGen: Sequence, out: boolean = false) {
-        this.node = new NFANodeImpl(idxGen, out);
+    constructor(idxGen: Sequence) {
+        this.node = new NFANodeImpl(idxGen);
     }
-    public setOut() {
-        this.node.out = true;
+    public setOut(ruleIdx: number) {
+        this.node.ruleIdx = ruleIdx;
     }
     public addTransition(dest: NFANode, char: number | null) {
         this.node.addTransition(dest.node, char);
@@ -159,8 +165,12 @@ export class NFARoot {
     private dfa = false;
     private idxGen: Sequence;
 
-    constructor(idxGen: Sequence, node: NFANode) {
-        this.entry = node.node;
+    constructor(idxGen: Sequence, ...nodes: NFANode[]) {
+        const entry = new NFANode(idxGen);
+        for (const node of nodes) {
+            entry.addTransition(node, null);
+        }
+        this.entry = entry.node;
         this.idxGen = idxGen;
     }
     public remove_empty() {
@@ -200,8 +210,9 @@ export class NFARoot {
                     for (const nextPossibleStateTransition of nextPossibleState.dest.outputs) {
                         newState.addTransition(nextPossibleStateTransition.dest, nextPossibleStateTransition.char);
                     }
-                    if (nextPossibleState.dest.out) {
-                        newState.out = true;
+                    if (nextPossibleState.dest.ruleIdx !== undefined &&
+                        (newState.ruleIdx === undefined || newState.ruleIdx > nextPossibleState.dest.ruleIdx)) {
+                        newState.ruleIdx = nextPossibleState.dest.ruleIdx;
                     }
                     node.outputs.splice(node.outputs.indexOf(nextPossibleState), 1);
                 }
@@ -209,16 +220,30 @@ export class NFARoot {
             }
         }
     }
-    public match(str: string): boolean {
+
+    public match(str: string, curPos: number = 0): [number, number] | undefined | EOF {
         const bytes = getBytes(str);
+        if (curPos == bytes.length) {
+            return new EOF();
+        }
+        this.determinise();
         var curNode = this.entry;
-        for (var pos = 0; pos < bytes.length; pos++) {
+        var lastRuleMatch: number | undefined = undefined;
+        var lastRuleMatchIdx: number = 0;
+        for (var pos = curPos; pos < bytes.length; pos++) {
             const edge = curNode.outputs.find(x => x.char == bytes[pos]);
             if (edge === undefined) {
-                return false;
+                break;
             }
             curNode = edge.dest;
+            if (curNode.ruleIdx !== undefined) {
+                lastRuleMatch = curNode.ruleIdx;
+                lastRuleMatchIdx = pos;
+            }
         }
-        return curNode.out;
+        if (lastRuleMatch === undefined) {
+            return undefined;
+        }
+        return [lastRuleMatch, lastRuleMatchIdx + 1];
     }
 }

@@ -1,4 +1,5 @@
-import { LitteralNode, MainNode, OneOrMoreNode, OrNode, SeqNode } from "./RegexNodes";
+import { Matcher } from "./Matcher";
+import { LitteralNode, MainNode, OrNode, RangeNode, RepetitionNode, SeqNode, ZeroOrMoreNode } from "./RegexNodes";
 
 export class Sequence {
     private idx: number = 0;
@@ -7,25 +8,14 @@ export class Sequence {
     }
 }
 
-const _node = new MainNode(new SeqNode(new OrNode(new SeqNode(new LitteralNode("a"),
-                                                              new LitteralNode("b")),
-                                       new OneOrMoreNode(new LitteralNode("c"))),
-                                       new LitteralNode("c")));
-console.log(_node.toString());
-const nfa = _node.getRootNFA(new Sequence());
-console.log(nfa.toString());
-nfa.remove_empty();
-console.log();
-console.log();
-console.log();
-console.log(nfa.toString());
-console.log();
-console.log();
-console.log();
-console.log(nfa.isDFA());
-nfa.determinise();
-console.log(nfa.isDFA());
-console.log();
-console.log();
-console.log();
-console.log(nfa.toString());
+const matcher = new Matcher();
+const idStart = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
+const numbers = "0123456789";
+const hexNumbers = numbers ;//+ "abcdef";
+matcher.registerRule("identifier", new SeqNode(new RangeNode(idStart),
+                                               new ZeroOrMoreNode(new RangeNode(idStart + numbers))))
+matcher.registerRule("space", new RepetitionNode(new RangeNode(" \t")));
+matcher.registerRule("number", new RepetitionNode(new RangeNode(numbers)));
+matcher.registerRule("hex_num", new SeqNode(new LitteralNode("0x"),
+                                            new RepetitionNode(new LitteralNode(hexNumbers))));
+matcher.match("a 0x123468975abedfdd 1234  fde");
