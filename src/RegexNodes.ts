@@ -19,6 +19,9 @@ function getBytes(s: string) {
 export class LitteralNode implements RegexNode {
     constructor(content: string) {
         this._val = content;
+        if (content.length === 0) {
+            throw Error("Litteral nodes could not be empties");
+        }
     }
 
     private _val: string;
@@ -72,12 +75,23 @@ export class OrNode implements RegexNode {
     }
 }
 
-export class OptionalNode extends OrNode {
+export class OptionalNode implements RegexNode {
     constructor(node: RegexNode) {
-        super(node, new LitteralNode(""));
+        this.node =node;
     }
+
+    private node: RegexNode;
+
+    getNFA(idxGen: Sequence): [NFANode, NFANode] {
+        const firstNode = new NFANode(idxGen);
+        const otherNode = this.node.getNFA(idxGen);
+        firstNode.addTransition(otherNode[0], null);
+        firstNode.addTransition(otherNode[1], null);
+        return [firstNode, otherNode[1]];
+    }
+
     public toString(): string {
-        return "(" + this.nodes[0].toString() + ")?";
+        return "(" + this.node.toString() + ")?";
     }
 }
 
