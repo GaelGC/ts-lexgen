@@ -6,7 +6,7 @@ export interface RegexNode {
     getNFA(idxGen: Sequence): [NFANode, NFANode];
 }
 
-function getBytes(s: string) {
+export function getBytes(s: string) {
     var bytes: number[] = Array();
     for (var pos = 0; pos < s.length; pos++) {
         const code = s.charCodeAt(pos);

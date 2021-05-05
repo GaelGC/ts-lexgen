@@ -1,4 +1,5 @@
 import { Sequence } from "./main";
+import { getBytes } from "./RegexNodes";
 
 class NFATransitions {
     constructor(dest: NFANodeImpl, char: number | null) {
@@ -207,5 +208,17 @@ export class NFARoot {
                 node.addTransition(newState, curTransition[0]);
             }
         }
+    }
+    public match(str: string): boolean {
+        const bytes = getBytes(str);
+        var curNode = this.entry;
+        for (var pos = 0; pos < bytes.length; pos++) {
+            const edge = curNode.outputs.find(x => x.char == bytes[pos]);
+            if (edge === undefined) {
+                return false;
+            }
+            curNode = edge.dest;
+        }
+        return curNode.out;
     }
 }
