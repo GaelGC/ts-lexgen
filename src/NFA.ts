@@ -221,17 +221,20 @@ export class NFARoot {
         }
     }
 
-    public match(str: string, curPos: number = 0): [number, number] | undefined | EOF {
-        const bytes = getBytes(str);
-        if (curPos == bytes.length) {
+    public match(str: string | number[], curPos: number = 0): [number, number] | undefined | EOF {
+        if (typeof str == "string") {
+            const bytes = getBytes(str);
+            return this.match(bytes)
+        }
+        if (curPos == str.length) {
             return new EOF();
         }
         this.determinise();
         var curNode = this.entry;
         var lastRuleMatch: number | undefined = undefined;
         var lastRuleMatchIdx: number = 0;
-        for (var pos = curPos; pos < bytes.length; pos++) {
-            const edge = curNode.outputs.find(x => x.char == bytes[pos]);
+        for (var pos = curPos; pos < str.length; pos++) {
+            const edge = curNode.outputs.find(x => x.char == str[pos]);
             if (edge === undefined) {
                 break;
             }

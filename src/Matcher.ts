@@ -1,6 +1,6 @@
 import { Sequence } from "./main";
 import { EOF, NFANode, NFARoot } from "./NFA";
-import { RegexNode } from "./RegexNodes";
+import { getBytes, RegexNode } from "./RegexNodes";
 
 class Rule {
     constructor(name: string, nodeEntry: NFANode, nodeExit: NFANode, idx: number) {
@@ -43,13 +43,14 @@ export class Matcher {
     }
 
     public match(str: string) {
+        const bytes = getBytes(str);
         if (this.root === undefined) {
             this.compile();
         }
         var curPos = 0;
         var res: undefined | EOF | [number, number];
         while (true) {
-            res = this.root!.match(str, curPos);
+            res = this.root!.match(bytes, curPos);
             if (res === undefined) {
                 console.log("Error");
                 break;
