@@ -9,9 +9,11 @@ export interface RegexNode {
 export function getBytes(s: string) {
     var bytes: number[] = Array();
     for (var pos = 0; pos < s.length; pos++) {
-        const code = s.charCodeAt(pos);
-        bytes.push(code & 0xff);
-        bytes.push((code / 256) | 0);
+        var code = s.charCodeAt(pos);
+        do {
+            bytes.push(code & 0xff);
+            code = (code / 256) | 0;
+        } while (code !== 0);
     }
     return bytes;
 }
