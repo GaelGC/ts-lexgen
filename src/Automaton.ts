@@ -322,11 +322,7 @@ export class DFAAutomaton extends AutomatonBase implements DFA {
         }
     }
 
-    public match(str: string | number[], curPos: number = 0): [number, number] | undefined | EOF {
-        if (typeof str == "string") {
-            const bytes = getBytes(str);
-            return this.match(bytes)
-        }
+    public match(str: number[], curPos: number = 0): [number, number] | undefined | EOF {
         if (curPos == str.length) {
             return new EOF();
         }

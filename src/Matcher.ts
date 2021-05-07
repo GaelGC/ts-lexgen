@@ -19,7 +19,7 @@ export class Matcher {
     rules: Rule[];
     root: DFA | undefined;
 
-    constructor () {
+    constructor() {
         this.rules = new Array();
         this.root = undefined;
     }
@@ -42,26 +42,19 @@ export class Matcher {
         console.log("\n\n\n");
     }
 
-    public match(str: string) {
-        const bytes = getBytes(str);
+    public match(str: string | number[], pos: number = 0): undefined | EOF | [string, number[], number] {
+        if (typeof str === "string") {
+            const bytes = getBytes(str);
+            return this.match(bytes, pos);
+        }
         if (this.root === undefined) {
             this.compile();
         }
 
-        var curPos = 0;
-        var res: undefined | EOF | [number, number];
-        while (true) {
-            res = this.root!.match(bytes, curPos);
-            if (res === undefined) {
-                console.log("Error");
-                break;
-            }
-            if (res instanceof EOF) {
-                console.log("EOF");
-                break;
-            }
-            console.log(this.rules[res[0]].name);
-            curPos = res[1];
+        const res = this.root!.match(str, pos);
+        if (res instanceof EOF || res === undefined) {
+            return res;
         }
+        return [this.rules[res[0]].name, str.slice(pos, res[1]), res[1]]
     }
 }
