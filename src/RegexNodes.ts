@@ -1,9 +1,9 @@
 import { Sequence } from "./main";
-import { NFANode, NFARoot } from "./NFA";
+import { AutomatonNode, AutomatonNodeBase, MutableAutomatonNode } from "./Automaton";
 
 export interface RegexNode {
     toString(): string;
-    getNFA(idxGen: Sequence): [NFANode, NFANode];
+    getNFA(idxGen: Sequence): [MutableAutomatonNode, MutableAutomatonNode];
 }
 
 export function getBytes(s: string) {
@@ -41,12 +41,12 @@ export class LitteralNode implements RegexNode {
         return res;
     }
     
-    public getNFA(idxGen: Sequence): [NFANode, NFANode] {
+    public getNFA(idxGen: Sequence): [MutableAutomatonNode, MutableAutomatonNode] {
         const bytes = getBytes(this.val);
-        const firstNode = new NFANode(idxGen);
+        const firstNode = new AutomatonNodeBase(idxGen);
         var lastNode = firstNode;
         for (const c of bytes) {
-            var newNode = new NFANode(idxGen);
+            var newNode = new AutomatonNodeBase(idxGen);
             lastNode.addTransition(newNode, c);
             lastNode = newNode;
         }
@@ -65,9 +65,9 @@ export class OrNode implements RegexNode {
         return "(" + this.nodes.map(x => x.toString()).join("|") + ")";
     }
 
-    public getNFA(idxGen: Sequence): [NFANode, NFANode] {
-        const firstNode = new NFANode(idxGen);
-        const lastNode = new NFANode(idxGen);
+    public getNFA(idxGen: Sequence): [MutableAutomatonNode, MutableAutomatonNode] {
+        const firstNode = new AutomatonNodeBase(idxGen);
+        const lastNode = new AutomatonNodeBase(idxGen);
         for (const node of this.nodes) {
             const [entry, end] = node.getNFA(idxGen);
             firstNode.addTransition(entry, null);
@@ -84,8 +84,8 @@ export class OptionalNode implements RegexNode {
 
     private node: RegexNode;
 
-    getNFA(idxGen: Sequence): [NFANode, NFANode] {
-        const firstNode = new NFANode(idxGen);
+    getNFA(idxGen: Sequence): [MutableAutomatonNode, MutableAutomatonNode] {
+        const firstNode = new AutomatonNodeBase(idxGen);
         const otherNode = this.node.getNFA(idxGen);
         firstNode.addTransition(otherNode[0], null);
         firstNode.addTransition(otherNode[1], null);
@@ -108,9 +108,9 @@ export class SeqNode implements RegexNode {
         return "(" + this.nodes.map(x => x.toString()).join("") + ")";
     }
 
-    public getNFA(idxGen: Sequence): [NFANode, NFANode] {
-        const firstNode = new NFANode(idxGen);
-        var lastNode = firstNode;
+    public getNFA(idxGen: Sequence): [MutableAutomatonNode, MutableAutomatonNode] {
+        const firstNode = new AutomatonNodeBase(idxGen);
+        var lastNode: MutableAutomatonNode = firstNode;
         for (const node of this.nodes) {
             var [entry, exit] = node.getNFA(idxGen);
             lastNode.addTransition(entry, null);
@@ -131,7 +131,7 @@ export class RepetitionNode implements RegexNode {
         return "(" + this.node.toString() + ")+";
     }
 
-    public getNFA(idxGen: Sequence): [NFANode, NFANode] {
+    public getNFA(idxGen: Sequence): [MutableAutomatonNode, MutableAutomatonNode] {
         const [entry, exit] = this.node.getNFA(idxGen);
         exit.addTransition(entry, null);
         return [entry, exit];
@@ -145,7 +145,7 @@ export class ZeroOrMoreNode implements RegexNode {
 
     private node: RegexNode;
 
-    getNFA(idxGen: Sequence): [NFANode, NFANode] {
+    getNFA(idxGen: Sequence): [MutableAutomatonNode, MutableAutomatonNode] {
         return this.node.getNFA(idxGen);
     }
     public toString(): string {
@@ -155,23 +155,35 @@ export class ZeroOrMoreNode implements RegexNode {
 
 export class RangeNode implements RegexNode {
     constructor(vals: string) {
-        const nodes: LitteralNode[] = new Array();
+        this.entryNode = new AutomatonNodeBase();
+        this.exitNode = new AutomatonNodeBase();
         for (const c of vals) {
-            nodes.push(new LitteralNode(c));
+            const bytes = getBytes(c);
+            if (bytes.length === 1) {
+                this.entryNode.addTransition(this.exitNode, bytes[0]);
+            } else {
+                var prevNode = this.entryNode;
+                for (const byte of bytes) {
+                    const node = new AutomatonNodeBase();
+                    prevNode.addTransition(node, byte);
+                    prevNode = node;
+                }
+                prevNode.addTransition(this.exitNode, null);
+            }
         }
-        this.node = new OrNode(...nodes);
         this.vals = vals;
     }
 
-    node: OrNode;
+    entryNode: AutomatonNodeBase;
+    exitNode: AutomatonNodeBase;
     vals: string;
 
     toString(): string {
         // TODO: Handle special cases
         return `[${Array.from(this.vals).join()}]`;
     }
-    getNFA(idxGen: Sequence): [NFANode, NFANode] {
-        return this.node.getNFA(idxGen);
+    getNFA(idxGen: Sequence): [MutableAutomatonNode, MutableAutomatonNode] {
+        return [this.entryNode, this.exitNode];
     }
 
 }
@@ -183,15 +195,15 @@ export class MainNode implements RegexNode {
 
     private node: RegexNode;
 
-    getRootNFA(idxGen: Sequence): NFARoot {
+    getRootNFA(idxGen: Sequence): MutableAutomatonNode {
         const nfa = this.node.getNFA(idxGen);
         nfa[1].setOut(0);
-        return new NFARoot(idxGen, nfa[0]);
+        return nfa[0];
     }
     public toString(): string {
         return this.node.toString();
     }
-    getNFA(idxGen: Sequence): [NFANode, NFANode] {
+    getNFA(idxGen: Sequence): [MutableAutomatonNode, MutableAutomatonNode] {
         throw new Error("getRootNFA should be called here instead");
     }
 }

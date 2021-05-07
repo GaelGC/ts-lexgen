@@ -1,9 +1,9 @@
 import { Sequence } from "./main";
-import { EOF, NFANode, NFARoot } from "./NFA";
+import { AutomatonNode, EOF, EpsilonNFARoot } from "./Automaton";
 import { getBytes, RegexNode } from "./RegexNodes";
 
 class Rule {
-    constructor(name: string, nodeEntry: NFANode, nodeExit: NFANode, idx: number) {
+    constructor(name: string, nodeEntry: AutomatonNode, nodeExit: AutomatonNode, idx: number) {
         this.name = name;
         this.idx = idx;
         this.node = nodeEntry;
@@ -12,12 +12,12 @@ class Rule {
 
     name: string;
     idx: number;
-    node: NFANode;
+    node: AutomatonNode;
 }
 
 export class Matcher {
     rules: Rule[];
-    root: NFARoot | undefined;
+    root: EpsilonNFARoot | undefined;
 
     constructor () {
         this.rules = new Array();
@@ -25,16 +25,16 @@ export class Matcher {
     }
 
     public registerRule(name: string, node: RegexNode) {
-        var nfaNode: [NFANode, NFANode];
+        var nfaNode: [AutomatonNode, AutomatonNode];
         nfaNode = node.getNFA(new Sequence());
         this.rules.push(new Rule(name, nfaNode[0], nfaNode[1], this.rules.length));
     }
 
     public compile() {
-        this.root = new NFARoot(new Sequence(), ...this.rules.map(x => x.node));
+        this.root = new EpsilonNFARoot(new Sequence(), ...this.rules.map(x => x.node));
         console.log(this.root!.toString());
         console.log("\n\n\n");
-        this.root.remove_empty();
+        this.root.removeEpsilonTransitions();
         console.log(this.root!.toString());
         console.log("\n\n\n");
         this.root.determinise();
@@ -47,6 +47,7 @@ export class Matcher {
         if (this.root === undefined) {
             this.compile();
         }
+
         var curPos = 0;
         var res: undefined | EOF | [number, number];
         while (true) {
