@@ -6,7 +6,8 @@ export interface RegexNode {
     getNFA(idxGen: Sequence): [MutableAutomatonNode, MutableAutomatonNode];
 }
 
-export function getBytes(s: string) {
+export function getBytes(s: string): number[] {
+    s = unescape(encodeURIComponent(s));
     var bytes: number[] = Array();
     for (var pos = 0; pos < s.length; pos++) {
         var code = s.charCodeAt(pos);
@@ -16,6 +17,14 @@ export function getBytes(s: string) {
         } while (code !== 0);
     }
     return bytes;
+}
+
+export function getString(s: number[]): string {
+    var encodedString = "";
+    for (const c of s) {
+        encodedString += String.fromCharCode(c);
+    }
+    return decodeURIComponent(escape(encodedString));
 }
 
 export class LitteralNode implements RegexNode {

@@ -1,7 +1,7 @@
 //import { Matcher } from "./Matcher.txt";
 import { EOF } from "./Automaton";
 import { Matcher } from "./Matcher";
-import { getBytes, LitteralNode, MainNode, OrNode, RangeNode, RepetitionNode, SeqNode, ZeroOrMoreNode } from "./RegexNodes";
+import { getBytes, getString, LitteralNode, MainNode, OrNode, RangeNode, RepetitionNode, SeqNode, ZeroOrMoreNode } from "./RegexNodes";
 
 export class Sequence {
     private idx: number = 0;
@@ -37,7 +37,7 @@ while (true) {
         console.log("EOF");
         break;
     } else {
-        console.log(`Rule ${res[0]} matched with text ${res[1]}`);
+        console.log(`Rule ${res[0]} matched with text ${getString(res[1])}`);
         pos = res[2];
     }
 }
