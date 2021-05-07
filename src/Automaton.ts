@@ -7,7 +7,7 @@ export class EOF {
 
 export interface AutomatonNode {
     neighbors(): AutomatonNode[];
-    transitions(): ReadonlyArray<NFATransitions>;
+    transitions(): AutomatonTransition[];
     out(): number | undefined;
     idx(): number;
     toString(): string;
@@ -16,24 +16,35 @@ export interface AutomatonNode {
 
 export interface MutableAutomatonNode extends AutomatonNode {
     addTransition(dest: MutableAutomatonNode, char: number | null);
-    removeTransition(transition: NFATransitions);
+    removeTransition(transition: AutomatonTransition);
     neighbors(): MutableAutomatonNode[];
+    mutableTransitions(): MutableAutomatonTransition[];
 }
 
-class NFATransitions {
+class AutomatonTransition {
     constructor(dest: MutableAutomatonNode, char: number | null) {
         this._char = char;
         this._dest = dest;
     }
 
-    private _dest: MutableAutomatonNode;
-    public get dest(): MutableAutomatonNode {
+    protected _dest: MutableAutomatonNode;
+    public get dest(): AutomatonNode {
         return this._dest;
     }
 
-    private _char: number | null;
+    protected _char: number | null;
     public get char(): number | null {
         return this._char;
+    }
+};
+
+class MutableAutomatonTransition extends AutomatonTransition {
+    constructor(dest: MutableAutomatonNode, char: number | null) {
+        super(dest, char)
+    }
+
+    public get dest(): MutableAutomatonNode {
+        return this._dest;
     }
 };
 
@@ -50,7 +61,7 @@ export class AutomatonNodeBase implements AutomatonNode, MutableAutomatonNode {
     }
 
     nodeIdx: number;
-    outputs: NFATransitions[];
+    outputs: MutableAutomatonTransition[];
     ruleIdx: number | undefined;
 
     idx(): number {
@@ -61,7 +72,11 @@ export class AutomatonNodeBase implements AutomatonNode, MutableAutomatonNode {
         return this.ruleIdx;
     }
 
-    transitions(): ReadonlyArray<NFATransitions> {
+    transitions(): AutomatonTransition[] {
+        return this.mutableTransitions();
+    }
+
+    mutableTransitions(): MutableAutomatonTransition[] {
         return this.outputs.map(x => x);
     }
 
@@ -82,9 +97,10 @@ export class AutomatonNodeBase implements AutomatonNode, MutableAutomatonNode {
     }
 
     public addTransition(dest: MutableAutomatonNode, char: number | null) {
-        this.outputs.push(new NFATransitions(dest, char));
+        this.outputs.push(new MutableAutomatonTransition(dest, char));
     }
-    removeTransition(transition: NFATransitions) {
+
+    removeTransition(transition: MutableAutomatonTransition) {
         const idx = this.outputs.indexOf(transition);
         if (idx == -1) {
             throw Error("Tried to remove a nonexisting transition");
@@ -106,19 +122,29 @@ export class AutomatonNodeBase implements AutomatonNode, MutableAutomatonNode {
     }
 }
 
-export class EpsilonNFARoot {
-    private entry: AutomatonNodeBase;
-    private dfa = false;
-    private idxGen: Sequence;
+export interface Automaton {
+    nodes(): AutomatonNode[];
+    toString(): string;
+};
 
-    constructor(idxGen: Sequence, ...nodes: AutomatonNode[]) {
-        const entry = new AutomatonNodeBase(idxGen);
-        this.entry = entry;
+export interface ENFA extends Automaton {
+    getNFA(): NFA;
+}
+export interface NFA extends Automaton {
+    getDFA(): DFA;
+}
+export interface DFA extends Automaton {
+    match(str: string | number[], curPos?: number): [number, number] | undefined | EOF;
+}
+
+class AutomatonBase implements Automaton {
+    constructor(idxGen: Sequence, node: AutomatonNodeBase) {
+        this.entry = node;
         this.idxGen = idxGen;
-        for (const node of nodes) {
-            entry.addTransition(this.clone(node), null);
-        }
     }
+
+    public entry: AutomatonNodeBase;
+    public idxGen: Sequence;
 
     public nodes(): MutableAutomatonNode[] {
         const nodes = new Array<MutableAutomatonNode>();
@@ -136,14 +162,10 @@ export class EpsilonNFARoot {
         return nodes;
     }
 
-    private getEpsilonTransitions(node: AutomatonNode): NFATransitions[] {
-        return node.transitions().filter(x => x.char === null);
-    }
-
-    public clone(entry: AutomatonNode): MutableAutomatonNode {
+    protected static clone(idxGen: Sequence, entry: AutomatonNode): AutomatonNodeBase {
         const nodeList: Array<AutomatonNode> = [entry];
         const mapTranslation = new Array<[AutomatonNode, AutomatonNodeBase]>();
-        const newEntry = new AutomatonNodeBase(this.idxGen, entry.out())
+        const newEntry = new AutomatonNodeBase(idxGen, entry.out())
         mapTranslation.push([entry, newEntry]);
 
         var idx = 0;
@@ -152,7 +174,7 @@ export class EpsilonNFARoot {
             const copyNode = mapTranslation.find(x => x[0] === srcNode)![1];
             for (const transition of srcNode.transitions()) {
                 if (!nodeList.includes(transition.dest)) {
-                    const newNode = new AutomatonNodeBase(this.idxGen, transition.dest.out());
+                    const newNode = new AutomatonNodeBase(idxGen, transition.dest.out());
                     nodeList.push(transition.dest);
                     mapTranslation.push([transition.dest, newNode]);
                 }
@@ -173,8 +195,33 @@ export class EpsilonNFARoot {
         }
         return str;
     }
+}
 
-    public removeEpsilonTransitions(): EpsilonNFARoot {
+export class EpsilonNFAAutomaton extends AutomatonBase implements ENFA {
+    constructor(idxGen: Sequence, ...nodes: AutomatonNode[]) {
+        const entry = new AutomatonNodeBase(idxGen);
+        for (const node of nodes) {
+            entry.addTransition(AutomatonBase.clone(idxGen, node), null);
+        }
+        super(idxGen, entry);
+    }
+
+    public getNFA(): NFAAutomaton {
+        return new NFAAutomaton(this.idxGen, this.entry);
+    }
+}
+
+export class NFAAutomaton extends AutomatonBase implements NFA {
+    constructor(idxGen: Sequence, node: AutomatonNode) {
+        super(idxGen, AutomatonBase.clone(idxGen, node));
+        this.removeEpsilonTransitions();
+    }
+
+    private getEpsilonTransitions(node: MutableAutomatonNode): MutableAutomatonTransition[] {
+        return node.mutableTransitions().filter(x => x.char === null);
+    }
+
+    private removeEpsilonTransitions() {
         for (const node of this.nodes()) {
             var epsilons = this.getEpsilonTransitions(node);
             while (epsilons.length !== 0) {
@@ -185,7 +232,7 @@ export class EpsilonNFARoot {
                             node.setOut(epsilon.dest.out()!);
                         }
                     }
-                    for (const newTransition of epsilon.dest.transitions()) {
+                    for (const newTransition of epsilon.dest.mutableTransitions()) {
                         node.addTransition(newTransition.dest, newTransition.char);
                     }
                 }
@@ -194,7 +241,7 @@ export class EpsilonNFARoot {
         }
         for (const node of this.nodes()) {
             const transitionMap = new Map<number, MutableAutomatonNode[]>();
-            for (const transition of node.transitions()) {
+            for (const transition of node.mutableTransitions()) {
                 if (!transitionMap.has(transition.char!)) {
                     transitionMap.set(transition.char!, new Array());
                 }
@@ -206,39 +253,44 @@ export class EpsilonNFARoot {
                 }
             }
         }
-        return this;
     }
 
-    public getNonDeterministicNode(): MutableAutomatonNode | undefined {
-        if (!this.dfa) {
-            const nodes = this.nodes();
-            for (const node of nodes) {
-                const transitionChars: number[] = new Array();
-                for (const transition of node.transitions()) {
-                    const c = transition.char;
-                    if (transitionChars.includes(c!)) {
-                        return node;
-                    }
-                    transitionChars.push(c!);
+    public getDFA(): DFAAutomaton {
+        return new DFAAutomaton(this.idxGen, this);
+    }
+}
+
+export class DFAAutomaton extends AutomatonBase implements DFA {
+    constructor(idxGen: Sequence, source: NFAAutomaton) {
+        super(idxGen, AutomatonBase.clone(idxGen, source.entry));
+        this.determinise();
+    }
+
+    private getNonDeterministicNode(): MutableAutomatonNode | undefined {
+        const nodes = this.nodes();
+        for (const node of nodes) {
+            const transitionChars: number[] = new Array();
+            for (const transition of node.transitions()) {
+                const c = transition.char;
+                if (transitionChars.includes(c!)) {
+                    return node;
                 }
+                transitionChars.push(c!);
             }
         }
         return undefined;
     }
 
 
-    public isDFA(): boolean {
-        if (!this.dfa && this.getNonDeterministicNode() == undefined) {
-            this.dfa = true;
-        }
-        return this.dfa;
+    private isDFA(): boolean {
+        return this.getNonDeterministicNode() == undefined;
     }
 
-    public determinise() {
+    private determinise() {
         while (!this.isDFA()) {
             const node = this.getNonDeterministicNode()!;
-            var transitions = new Map<number, NFATransitions[]>();
-            for (const transition of node.transitions()) {
+            var transitions = new Map<number, MutableAutomatonTransition[]>();
+            for (const transition of node.mutableTransitions()) {
                 if (transition.char === null) {
                     throw Error("Should not be called on an automata with spontaneous transitions");
                 }
@@ -256,7 +308,7 @@ export class EpsilonNFARoot {
                 }
                 const newState = new AutomatonNodeBase(this.idxGen);
                 for (const nextPossibleState of value) {
-                    for (const nextPossibleStateTransition of nextPossibleState.dest.transitions()) {
+                    for (const nextPossibleStateTransition of nextPossibleState.dest.mutableTransitions()) {
                         newState.addTransition(nextPossibleStateTransition.dest, nextPossibleStateTransition.char);
                     }
                     if (nextPossibleState.dest.out() !== undefined &&

@@ -1,5 +1,5 @@
 import { Sequence } from "./main";
-import { AutomatonNode, EOF, EpsilonNFARoot } from "./Automaton";
+import { Automaton, AutomatonNode, DFA, EOF, EpsilonNFAAutomaton } from "./Automaton";
 import { getBytes, RegexNode } from "./RegexNodes";
 
 class Rule {
@@ -17,7 +17,7 @@ class Rule {
 
 export class Matcher {
     rules: Rule[];
-    root: EpsilonNFARoot | undefined;
+    root: DFA | undefined;
 
     constructor () {
         this.rules = new Array();
@@ -31,14 +31,14 @@ export class Matcher {
     }
 
     public compile() {
-        this.root = new EpsilonNFARoot(new Sequence(), ...this.rules.map(x => x.node));
-        console.log(this.root!.toString());
+        const enfa = new EpsilonNFAAutomaton(new Sequence(), ...this.rules.map(x => x.node));
+        console.log(enfa.toString());
         console.log("\n\n\n");
-        this.root.removeEpsilonTransitions();
-        console.log(this.root!.toString());
+        const nfa = enfa.getNFA();
+        console.log(nfa.toString());
         console.log("\n\n\n");
-        this.root.determinise();
-        console.log(this.root!.toString());
+        this.root = nfa.getDFA();
+        console.log(this.root.toString());
         console.log("\n\n\n");
     }
 
