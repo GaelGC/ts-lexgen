@@ -135,6 +135,7 @@ export interface NFA extends Automaton {
 }
 export interface DFA extends Automaton {
     match(str: string | number[], curPos?: number): [number, number] | undefined | EOF;
+    get_tables(): string;
 }
 
 class AutomatonBase implements Automaton {
@@ -345,5 +346,32 @@ export class DFAAutomaton extends AutomatonBase implements DFA {
             return undefined;
         }
         return [lastRuleMatch, lastRuleMatchIdx + 1];
+    }
+
+    get_tables(): string {
+        var nodes: AutomatonNode[] = this.nodes();
+        var nextState: number[][] = new Array();
+        var accept: number[] = new Array();
+        for (const node of nodes) {
+            nextState.push(new Array());
+            var arr = nextState[nextState.length - 1];
+            // Initialize with the "no exit" value.
+            for (var c = 0; c < 256; c++) {
+                arr.push(nodes.length);
+            }
+            for (const transition of node.transitions()) {
+                arr[transition.char!] = nodes.indexOf(transition.dest);
+            }
+            accept.push(node.out() === undefined ? -1 : node.out()!);
+        }
+        var str = '[';
+        str += nextState.map(state => '[' + state.join(", ") + ']').join(",\n");
+        str += ']';
+        str += ', ';
+        str += '[';
+        str += accept.join(", ")
+        str += ']';
+        str += ", new Map()";
+        return str;
     }
 }

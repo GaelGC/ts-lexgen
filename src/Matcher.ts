@@ -1,6 +1,8 @@
 import { Sequence } from "./main";
 import { Automaton, AutomatonNode, DFA, EOF, EpsilonNFAAutomaton } from "./Automaton";
 import { getBytes, RegexNode } from "./RegexNodes";
+import { render, renderFile } from "template-file";
+import fs = require('fs');
 
 class Rule {
     constructor(name: string, nodeEntry: AutomatonNode, nodeExit: AutomatonNode, idx: number) {
@@ -40,8 +42,11 @@ export class Matcher {
         this.root = nfa.getDFA();
         console.log(this.root.toString());
         console.log("\n\n\n");
+        console.log(this.root.get_tables());
+        console.log("\n\n\n");
+        var skeleton = fs.readFileSync("src/skeleton.ts.in").toString();
+        console.log(render(skeleton, {automaton: this.root.get_tables()}));
     }
-
     public match(str: string | number[], pos: number = 0): undefined | EOF | [string, number[], number] {
         if (typeof str === "string") {
             const bytes = getBytes(str);

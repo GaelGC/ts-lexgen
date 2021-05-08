@@ -1,0 +1,77 @@
+import { EOF } from "./Automaton";
+import { getBytes } from "./RegexNodes";
+
+class AutomatonData {
+    constructor(nextState: number[][], accept: number[],
+        nextAutomaton: Map<number, number>) {
+        this.nextAutomaton = nextAutomaton;
+        this.nextState = nextState;
+        this.accept = accept;
+    }
+    // Each array is a 256-numbers array pointing to the next state.
+    nextState: number[][];
+    // If -1, the state is not an exit node. Otherwise, it stores the rule
+    // index.
+    accept: number[];
+    // Maps rule indexes to new Automaton index.
+    nextAutomaton: Map<number, number>;
+}
+
+const automatonData = [
+    new AutomatonData(
+        {{automaton}}
+    )
+];
+
+abstract class Lexer {
+    constructor() {
+        this.automata = automatonData;
+    }
+    automata: AutomatonData[];
+    currentAutomaton: number = 0;
+    buffer: number[] = new Array();
+    abstract getBytes(): number[];
+    lex2(bytes: number[], curPos = 0): EOF | undefined | [number, number] {
+        if (curPos == bytes.length) {
+            return new EOF();
+        }
+        var curNode: number = 0;
+        var lastRuleMatch: number | undefined = undefined;
+        var lastRuleMatchIdx: number = 0;
+
+        const automaton = this.automata[this.currentAutomaton];
+        for (var pos = curPos; pos < bytes.length; pos++) {
+            const nextState = automaton.nextAutomaton;
+            const edge = automaton.nextState[curNode][bytes[pos]];
+            if (edge === automaton.nextState.length) {
+                break;
+            }
+            curNode = edge;
+            if (automaton.accept[curNode] !== -1) {
+                lastRuleMatch = automaton.accept[curNode]
+                lastRuleMatchIdx = pos;
+            }
+        }
+        if (lastRuleMatch === undefined) {
+            return undefined;
+        }
+        return [lastRuleMatch, lastRuleMatchIdx + 1];
+    }
+    lex(buf: number[]) {
+        const bytes = buf;//this.getBytes();
+        var pos = 0;
+        while (true) {
+            const res = this.lex2(bytes, pos);
+            if (res === undefined) {
+                console.log("error");
+                return;
+            } else if (res instanceof EOF) {
+                console.log("EOF");
+                return;
+            } else {
+                pos = res[1];
+                console.log("Match on rule " + res[0]);
+            }
+        }
+    }
+}
