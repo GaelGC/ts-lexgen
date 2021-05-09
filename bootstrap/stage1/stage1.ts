@@ -10,6 +10,7 @@ import fs = require('fs');
 import { EOF } from "../../src/Automaton";
 import { Matcher } from "../../src/Matcher";
 import { LexerGenerator } from "../../src/LexerGenerator";
+import { handleChar, handleSpecialChar, pop, unEscape } from "../helpers/CharacterHandlers";
 import { getBytes, getString, LitteralNode, OptionalNode, OrNode, RangeNode, RegexNode, RepetitionNode, SeqNode, ZeroOrMoreNode } from "../../src/RegexNodes";
 
 const matcher = new Matcher();
@@ -42,20 +43,6 @@ var curState: State = State.Initial;
 var curName = "";
 var nodes: RegexNode[] = [new LitteralNode("")];
 var opStack: string[] = [];
-const applyOp = (op) => {
-    if (op === "|") {
-        const right = nodes.pop()!;
-        const left = nodes.pop()!;
-        nodes.push(new OrNode(left, right));
-    } else if (op === '(') {
-        opStack.push(' ');
-    } else if (op === ' ') {
-        const right = nodes.pop()!;
-        const left = nodes.pop()!;
-        nodes.push(new SeqNode(left, right));
-    }
-}
-
 var stateName = "INITIAL";
 const generator = new LexerGenerator();
 var pos = 0;
@@ -104,53 +91,22 @@ while (!eof) {
             break;
         }
         case State.DefinitionOngoing: {
-            if (res[0] === "newline") {
-                while (nodes.length !== 1) {
-                    applyOp(opStack.pop());
+            var c = getString(res[1]);
+            if (res[0] === "escape") {
+                c = unEscape(c);
+            }
+            if (res[0] === "special") {
+                handleSpecialChar(c, nodes, opStack);
+            } else if (res[0] === "newline") {
+                while (opStack.length !== 0) {
+                    pop(nodes, opStack);
                 }
                 console.log(`Registering rule ${curName} with content ${nodes[0].toString()}`);
                 outputLexer.registerRule(curName, nodes[0]);
                 nodes = [new LitteralNode("")];
                 curState = State.Initial;
-            } else if (res[0] === "normal" || res[0] === "equal" || res[0] == "separator") {
-                nodes.push(new SeqNode(nodes.pop()!, new LitteralNode(getString(res[1]))));
-            } else if (res[0] === "escape") {
-                if (getString(res[1]) === "\\r") {
-                    nodes.push(new SeqNode(nodes.pop()!, new LitteralNode("\r")));
-                } else if (getString(res[1]) === "\\n") {
-                    nodes.push(new SeqNode(nodes.pop()!, new LitteralNode("\n")));
-                } else {
-                    nodes.push(new SeqNode(nodes.pop()!, new LitteralNode(getString(res[1])[1])));
-                }
             } else {
-                if (getString(res[1]) === '.') {
-                    nodes.push(new SeqNode(nodes.pop()!, new RangeNode(letters)));
-                } else if (getString(res[1]) === '?') {
-                    nodes.push(new OptionalNode(nodes.pop()!));
-                } else if (getString(res[1]) === '*') {
-                    nodes.push(new ZeroOrMoreNode(nodes.pop()!));
-                } else if (getString(res[1]) === '+') {
-                    nodes.push(new RepetitionNode(nodes.pop()!));
-                } else if (getString(res[1]) === '=' || getString(res[1]) === '>') {
-                    nodes.push(new SeqNode(nodes.pop()!, new LitteralNode(getString(res[1]))));
-                } else if (getString(res[1]) === '|') {
-                    nodes.push(new LitteralNode(""));
-                    opStack.push('|');
-                } else if (getString(res[1]) === '(') {
-                    nodes.push(new LitteralNode(""));
-                    opStack.push('(');
-                } else if (getString(res[1]) === ')') {
-                    var op = opStack.pop();
-                    while (op !== '(' && op !== undefined) {
-                        applyOp(op);
-                        op = opStack.pop();
-                    }
-                    if(op === '(') {
-                        applyOp(op);
-                    } else {
-                        throw new Error("parentheses mismatch");
-                    }
-                }
+                handleChar(c, nodes, opStack);
             }
             break;
         }
