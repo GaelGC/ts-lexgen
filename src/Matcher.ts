@@ -1,4 +1,4 @@
-import { Automaton, AutomatonNode, DFA, EOF, EpsilonNFAAutomaton } from "./Automaton";
+import { Automaton, AutomatonNode, NFA, ENFA, DFA, EOF, EpsilonNFAAutomaton } from "./Automaton";
 import { getBytes, RegexNode, Sequence } from "./RegexNodes";
 import { render, renderFile } from "template-file";
 import fs = require('fs');
@@ -18,11 +18,12 @@ class Rule {
 
 export class Matcher {
     rules: Rule[];
-    root: DFA | undefined;
+    root: DFA | undefined = undefined;
+    enfa: ENFA | undefined = undefined;
+    nfa: NFA | undefined = undefined;
 
     constructor() {
         this.rules = new Array();
-        this.root = undefined;
     }
 
     public registerRule(name: string, node: RegexNode) {
@@ -36,19 +37,12 @@ export class Matcher {
             libDir = "";
         }
         const enfa = new EpsilonNFAAutomaton(new Sequence(), ...this.rules.map(x => x.node));
-        console.log(enfa.toString());
-        console.log("\n\n\n");
         const nfa = enfa.getNFA();
-        console.log(nfa.toString());
-        console.log("\n\n\n");
         this.root = nfa.getDFA();
-        console.log(this.root.toString());
-        console.log("\n\n\n");
-        console.log(this.root.get_tables());
-        console.log("\n\n\n");
         var skeleton = fs.readFileSync("src/skeleton.ts.in").toString();
         return render(skeleton, {automaton: this.root.get_tables(), libDir: libDir});
     }
+
     public match(str: string | number[], pos: number = 0): undefined | EOF | [string, number[], number] {
         if (typeof str === "string") {
             const bytes = getBytes(str);
