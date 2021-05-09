@@ -1,5 +1,5 @@
-import { EOF } from "./Automaton";
-import { getBytes } from "./RegexNodes";
+import { EOF } from "{{ libDir }}Automaton";
+import { getBytes } from "{{ libDir }}RegexNodes";
 
 class AutomatonData {
     constructor(nextState: number[][], accept: number[],
@@ -17,7 +17,7 @@ class AutomatonData {
     nextAutomaton: Map<number, number>;
 }
 
-const automatonData = [
+const automata = [
     new AutomatonData(
         {{automaton}}
     )
@@ -25,24 +25,28 @@ const automatonData = [
 
 abstract class Lexer {
     constructor() {
-        this.automata = automatonData;
+        this.automata = automata;
     }
     automata: AutomatonData[];
     currentAutomaton: number = 0;
     buffer: number[] = new Array();
     abstract getBytes(): number[];
-    lex2(bytes: number[], curPos = 0): EOF | undefined | [number, number] {
-        if (curPos == bytes.length) {
-            return new EOF();
+    private lex(): EOF | undefined | [number, number[]] {
+        if (this.buffer.length === 0) {
+            this.buffer = this.getBytes();
+            if (this.buffer.length === 0) {
+                return new EOF();
+            }
         }
-        var curNode: number = 0;
+        var pos = 0;
+        var curNode = 0;
         var lastRuleMatch: number | undefined = undefined;
-        var lastRuleMatchIdx: number = 0;
+        var lastRuleMatchIdx = 0;
 
         const automaton = this.automata[this.currentAutomaton];
-        for (var pos = curPos; pos < bytes.length; pos++) {
+        while (pos !== this.buffer.length) {
             const nextState = automaton.nextAutomaton;
-            const edge = automaton.nextState[curNode][bytes[pos]];
+            const edge = automaton.nextState[curNode][this.buffer[pos]];
             if (edge === automaton.nextState.length) {
                 break;
             }
@@ -51,27 +55,15 @@ abstract class Lexer {
                 lastRuleMatch = automaton.accept[curNode]
                 lastRuleMatchIdx = pos;
             }
+            pos++;
+            if (pos === this.buffer.length) {
+                this.buffer = this.buffer.concat(this.getBytes());
+            }
         }
         if (lastRuleMatch === undefined) {
             return undefined;
         }
-        return [lastRuleMatch, lastRuleMatchIdx + 1];
-    }
-    lex(buf: number[]) {
-        const bytes = buf;//this.getBytes();
-        var pos = 0;
-        while (true) {
-            const res = this.lex2(bytes, pos);
-            if (res === undefined) {
-                console.log("error");
-                return;
-            } else if (res instanceof EOF) {
-                console.log("EOF");
-                return;
-            } else {
-                pos = res[1];
-                console.log("Match on rule " + res[0]);
-            }
-        }
+        const matchBytes = this.buffer.splice(0, lastRuleMatchIdx + 1);
+        return [lastRuleMatch, matchBytes];
     }
 }

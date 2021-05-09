@@ -31,7 +31,10 @@ export class Matcher {
         this.rules.push(new Rule(name, nfaNode[0], nfaNode[1], this.rules.length));
     }
 
-    public compile() {
+    public compile(libDir?: string): string {
+        if (libDir === undefined) {
+            libDir = "";
+        }
         const enfa = new EpsilonNFAAutomaton(new Sequence(), ...this.rules.map(x => x.node));
         console.log(enfa.toString());
         console.log("\n\n\n");
@@ -44,7 +47,7 @@ export class Matcher {
         console.log(this.root.get_tables());
         console.log("\n\n\n");
         var skeleton = fs.readFileSync("src/skeleton.ts.in").toString();
-        console.log(render(skeleton, {automaton: this.root.get_tables()}));
+        return render(skeleton, {automaton: this.root.get_tables(), libDir: libDir});
     }
     public match(str: string | number[], pos: number = 0): undefined | EOF | [string, number[], number] {
         if (typeof str === "string") {

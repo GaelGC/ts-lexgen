@@ -1,7 +1,15 @@
+// This file is part of the bootstrapping.
+// Especially, it is the first step of the lexer generator's bootstrap.
+// As such, its lexer should not be generated, but instead parsed by hand.
+// Syntax of the lexed files:
+// name1=>Regex
+// >state
+// name1=>Regex
+
 import fs = require('fs');
-import { EOF } from "../../Automaton";
-import { Matcher } from "../../Matcher";
-import { getBytes, getString, LitteralNode, OptionalNode, OrNode, RangeNode, RegexNode, RepetitionNode, SeqNode, ZeroOrMoreNode } from "../../RegexNodes";
+import { EOF } from "../../src/Automaton";
+import { Matcher } from "../../src/Matcher";
+import { getBytes, getString, LitteralNode, OptionalNode, OrNode, RangeNode, RegexNode, RepetitionNode, SeqNode, ZeroOrMoreNode } from "../../src/RegexNodes";
 
 const matcher = new Matcher();
 const special = "\\\n\r.?()|*+=>";
@@ -46,7 +54,7 @@ const applyOp = (op) => {
 }
 
 var pos = 0;
-var bytes = getBytes(fs.readFileSync("./src/bootstrap/stage2/stage2.l").toString());
+var bytes = getBytes(fs.readFileSync("./bootstrap/stage2/stage2.l").toString());
 var eof = false;
 while (!eof) {
     var res = matcher.match(bytes, pos);
@@ -130,4 +138,7 @@ while (!eof) {
     pos = res[2];
 }
 
-outputLexer.compile();
+const code = outputLexer.compile("../../src/");
+console.log(process.cwd())
+
+fs.writeFileSync("./bootstrap/stage2/Stage2Lexer.ts", code);

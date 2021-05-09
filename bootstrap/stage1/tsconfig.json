@@ -12,8 +12,4 @@
     "strict": true,
     "outDir": "dist",
   },
-  "exclude": [
-    "bootstrap",
-    "node_modules",
-  ],
 }
