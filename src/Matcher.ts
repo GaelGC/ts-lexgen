@@ -1,6 +1,5 @@
-import { Sequence } from "./main";
 import { Automaton, AutomatonNode, DFA, EOF, EpsilonNFAAutomaton } from "./Automaton";
-import { getBytes, RegexNode } from "./RegexNodes";
+import { getBytes, RegexNode, Sequence } from "./RegexNodes";
 import { render, renderFile } from "template-file";
 import fs = require('fs');
 

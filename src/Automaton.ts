@@ -1,5 +1,4 @@
-import { Sequence } from "./main";
-import { getBytes } from "./RegexNodes";
+import { Sequence } from "./RegexNodes";
 
 export class EOF {
     private useless: undefined;
@@ -114,7 +113,13 @@ export class AutomatonNodeBase implements AutomatonNode, MutableAutomatonNode {
             const transitions = this.transitions().filter(x => x.dest === neighbor)!;
             var chars = "";
             for (const transition of transitions) {
-                chars += transition.char === null ? "ϵ" : String.fromCharCode(transition.char);
+                const handleSpecials = (str: string): string => {
+                    str = str.replace(/\n/g, "\\n");
+                    str = str.replace(/\r/g, "\\r");
+                    str = str.replace(/\\/g, "\\\\");
+                    return str;
+                }
+                chars += transition.char === null ? "ϵ" : handleSpecials(String.fromCharCode(transition.char));
             }
             str += `${this.nodeIdx} -> ${neighbor.idx()} [label=\"${chars}\"]\n`;
         }

@@ -1,5 +1,11 @@
-import { Sequence } from "./main";
 import { AutomatonNode, AutomatonNodeBase, MutableAutomatonNode } from "./Automaton";
+
+export class Sequence {
+    private idx: number = 0;
+    public get(): number {
+        return this.idx++;
+    }
+}
 
 export interface RegexNode {
     toString(): string;
@@ -30,9 +36,6 @@ export function getString(s: number[]): string {
 export class LitteralNode implements RegexNode {
     constructor(content: string) {
         this._val = content;
-        if (content.length === 0) {
-            throw Error("Litteral nodes could not be empties");
-        }
     }
 
     private _val: string;

@@ -3,13 +3,6 @@ import { EOF } from "./Automaton";
 import { Matcher } from "./Matcher";
 import { getBytes, getString, LitteralNode, MainNode, OrNode, RangeNode, RepetitionNode, SeqNode, ZeroOrMoreNode } from "./RegexNodes";
 
-export class Sequence {
-    private idx: number = 0;
-    public get(): number {
-        return this.idx++;
-    }
-}
-
 const matcher = new Matcher();
 const idStart = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
 const numbers = "0123456789";
