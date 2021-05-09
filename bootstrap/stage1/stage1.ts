@@ -28,12 +28,14 @@ matcher.registerRule("separator", new LitteralNode(separator));
 matcher.registerRule("newline", new SeqNode(new OptionalNode(new LitteralNode("\r")), new LitteralNode("\n")));
 matcher.registerRule("normal", new RepetitionNode(new RangeNode(letters)));
 matcher.registerRule("equal", new LitteralNode("="));
+matcher.registerRule("state", new LitteralNode(">"));
 matcher.registerRule("special", new RangeNode(special));
 
-const outputLexer = new Matcher();
+var outputLexer = new Matcher();
 enum State {
     Initial,
     NameAcquired,
+    StateDeclaration,
     DefinitionOngoing
 };
 var curState: State = State.Initial;
@@ -54,6 +56,8 @@ const applyOp = (op) => {
     }
 }
 
+var stateName = "INITIAL";
+const generator = new LexerGenerator();
 var pos = 0;
 var bytes = getBytes(fs.readFileSync("./bootstrap/stage2/stage2.l").toString());
 var eof = false;
@@ -68,12 +72,16 @@ while (!eof) {
     }
     switch (curState) {
         case State.Initial: {
-            if (res[0] !== "newline" && res[0] !== "normal") {
+            console.log(getString(res[1]));
+            if (res[0] !== "newline" && res[0] !== "normal" && res[0] !== "state") {
                 throw Error(`Unexpected ${res[0]} at beginning of line.`);
             }
             if (res[0] === "normal") {
                 curName = getString(res[1])
                 curState = State.NameAcquired;
+            }
+            if (res[0] === "state") {
+                curState = State.StateDeclaration;
             }
             break;
         }
@@ -82,6 +90,17 @@ while (!eof) {
                 throw Error("Expected =>");
             }
             curState = State.DefinitionOngoing;
+            break;
+        }
+        case State.StateDeclaration: {
+            if (res[0] === "normal") {
+                generator.addStateMatcher(stateName, outputLexer);
+                stateName = getString(res[1]);
+                outputLexer = new Matcher();
+            }
+            if (res[0] === "newline") {
+                curState = State.Initial;
+            }
             break;
         }
         case State.DefinitionOngoing: {
@@ -139,8 +158,7 @@ while (!eof) {
     pos = res[2];
 }
 
-const generator = new LexerGenerator();
-generator.addStateMatcher("INITIAL", outputLexer);
+generator.addStateMatcher(stateName, outputLexer);
 const code = generator.compile("../../src/");
 
 fs.writeFileSync("./bootstrap/stage2/Stage2Lexer.ts", code);
