@@ -50,6 +50,8 @@ export class LitteralNode implements RegexNode {
         for (const escape of escapes) {
             res = res.split(escape).join('\\' + escape);
         }
+        res = res.replace(/\r/g, "\\r");
+        res = res.replace(/\n/g, "\\n");
         return res;
     }
     

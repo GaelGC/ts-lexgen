@@ -88,6 +88,7 @@ while (!eof) {
                 while (nodes.length !== 1) {
                     applyOp(opStack.pop());
                 }
+                console.log(`Registering rule ${curName} with content ${nodes[0].toString()}`);
                 outputLexer.registerRule(curName, nodes[0]);
                 nodes = [new LitteralNode("")];
                 curState = State.Initial;
@@ -134,7 +135,6 @@ while (!eof) {
             break;
         }
     }
-    console.log(`Rule ${res[0]} matched with text ${getString(res[1])}`);
     pos = res[2];
 }
 
