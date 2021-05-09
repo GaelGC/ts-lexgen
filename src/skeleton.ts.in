@@ -18,20 +18,19 @@ class AutomatonData {
 }
 
 const automata = [
-    new AutomatonData(
-        {{automaton}}
-    )
+    {{automata}}
 ];
 
-abstract class Lexer {
+export const ruleNames: string[][] = [{{names}}];
+export const stateNames: string[] = [{{states}}];
+
+export abstract class Lexer {
     constructor() {
-        this.automata = automata;
     }
-    automata: AutomatonData[];
     currentAutomaton: number = 0;
     buffer: number[] = new Array();
     abstract getBytes(): number[];
-    private lex(): EOF | undefined | [number, number[]] {
+    public lex(): EOF | undefined | [number, number[]] {
         if (this.buffer.length === 0) {
             this.buffer = this.getBytes();
             if (this.buffer.length === 0) {
@@ -43,7 +42,7 @@ abstract class Lexer {
         var lastRuleMatch: number | undefined = undefined;
         var lastRuleMatchIdx = 0;
 
-        const automaton = this.automata[this.currentAutomaton];
+        const automaton = automata[this.currentAutomaton];
         while (pos !== this.buffer.length) {
             const nextState = automaton.nextAutomaton;
             const edge = automaton.nextState[curNode][this.buffer[pos]];

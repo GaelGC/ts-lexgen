@@ -140,7 +140,7 @@ export interface NFA extends Automaton {
 }
 export interface DFA extends Automaton {
     match(str: string | number[], curPos?: number): [number, number] | undefined | EOF;
-    get_tables(): string;
+    getTables(): string;
 }
 
 class AutomatonBase implements Automaton {
@@ -353,7 +353,7 @@ export class DFAAutomaton extends AutomatonBase implements DFA {
         return [lastRuleMatch, lastRuleMatchIdx + 1];
     }
 
-    get_tables(): string {
+    getTables(): string {
         var nodes: AutomatonNode[] = this.nodes();
         var nextState: number[][] = new Array();
         var accept: number[] = new Array();
@@ -369,14 +369,14 @@ export class DFAAutomaton extends AutomatonBase implements DFA {
             }
             accept.push(node.out() === undefined ? -1 : node.out()!);
         }
-        var str = '[';
+        var str = 'new AutomatonData([';
         str += nextState.map(state => '[' + state.join(", ") + ']').join(",\n");
         str += ']';
         str += ', ';
         str += '[';
         str += accept.join(", ")
         str += ']';
-        str += ", new Map()";
+        str += ", new Map())";
         return str;
     }
 }

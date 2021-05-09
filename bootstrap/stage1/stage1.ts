@@ -9,6 +9,7 @@
 import fs = require('fs');
 import { EOF } from "../../src/Automaton";
 import { Matcher } from "../../src/Matcher";
+import { LexerGenerator } from "../../src/LexerGenerator";
 import { getBytes, getString, LitteralNode, OptionalNode, OrNode, RangeNode, RegexNode, RepetitionNode, SeqNode, ZeroOrMoreNode } from "../../src/RegexNodes";
 
 const matcher = new Matcher();
@@ -138,7 +139,8 @@ while (!eof) {
     pos = res[2];
 }
 
-const code = outputLexer.compile("../../src/");
-console.log(process.cwd())
+const generator = new LexerGenerator();
+generator.addStateMatcher("INITIAL", outputLexer);
+const code = generator.compile("../../src/");
 
 fs.writeFileSync("./bootstrap/stage2/Stage2Lexer.ts", code);

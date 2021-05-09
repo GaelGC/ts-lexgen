@@ -1,7 +1,5 @@
 import { Automaton, AutomatonNode, NFA, ENFA, DFA, EOF, EpsilonNFAAutomaton } from "./Automaton";
 import { getBytes, RegexNode, Sequence } from "./RegexNodes";
-import { render, renderFile } from "template-file";
-import fs = require('fs');
 
 class Rule {
     constructor(name: string, nodeEntry: AutomatonNode, nodeExit: AutomatonNode, idx: number) {
@@ -32,15 +30,14 @@ export class Matcher {
         this.rules.push(new Rule(name, nfaNode[0], nfaNode[1], this.rules.length));
     }
 
-    public compile(libDir?: string): string {
-        if (libDir === undefined) {
-            libDir = "";
-        }
+    public compile(): { rules: string, automaton: string } {
         const enfa = new EpsilonNFAAutomaton(new Sequence(), ...this.rules.map(x => x.node));
         const nfa = enfa.getNFA();
         this.root = nfa.getDFA();
-        var skeleton = fs.readFileSync("src/skeleton.ts.in").toString();
-        return render(skeleton, {automaton: this.root.get_tables(), libDir: libDir});
+        return {
+            rules: this.rules.map(rule => `"${rule.name}"`).join(", "),
+            automaton: this.root.getTables()
+        }
     }
 
     public match(str: string | number[], pos: number = 0): undefined | EOF | [string, number[], number] {
