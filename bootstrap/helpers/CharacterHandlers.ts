@@ -65,12 +65,16 @@ export function handleSpecialChar(c: string, nodes: RegexNode[], opStack: string
             pop(nodes, opStack);
         }
         opStack.pop();
+        opStack.push('.');
     } else {
         var node: RegexNode | null = null;
         if (c === '.') {
             node = new RangeNode(letters);
         }
         if (c === '|') {
+            node = new LitteralNode("");
+        }
+        if (c === '(') {
             node = new LitteralNode("");
         }
         push(c, node, nodes, opStack);
