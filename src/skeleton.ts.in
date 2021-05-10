@@ -30,6 +30,11 @@ export abstract class Lexer {
     currentAutomaton: number = 0;
     buffer: number[] = new Array();
     abstract getBytes(): number[];
+
+    getRuleNames(): string[] {
+        return ruleNames[this.currentAutomaton];
+    }
+
     public lex(): EOF | undefined | [number, number[]] {
         if (this.buffer.length === 0) {
             this.buffer = this.getBytes();

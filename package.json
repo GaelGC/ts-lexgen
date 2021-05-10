@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc --build",
     "run": "node dist/main.js",
-    "bootstrap_stage1": "tsc --build bootstrap/stage1 && node bootstrap/stage1/dist/bootstrap/stage1/stage1.js"
+    "bootstrap_stage1": "tsc --build bootstrap/stage1 && node bootstrap/stage1/dist/bootstrap/stage1/stage1.js",
+    "bootstrap_stage2": "tsc --build bootstrap/stage2 && node bootstrap/stage2/dist/bootstrap/stage2/Stage2.js"
   },
   "author": "",
   "license": "ISC",
