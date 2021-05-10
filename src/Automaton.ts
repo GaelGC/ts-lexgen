@@ -18,6 +18,7 @@ export interface MutableAutomatonNode extends AutomatonNode {
     removeTransition(transition: AutomatonTransition);
     neighbors(): MutableAutomatonNode[];
     mutableTransitions(): MutableAutomatonTransition[];
+    sortTransitions(): void;
 }
 
 class AutomatonTransition {
@@ -57,6 +58,10 @@ export class AutomatonNodeBase implements AutomatonNode, MutableAutomatonNode {
 
         this.outputs = new Array();
         this.ruleIdx = ruleIdx;
+    }
+
+    sortTransitions() {
+        this.outputs.sort(x => x.char === null ? -1 : x.char);
     }
 
     nodeIdx: number;
@@ -326,13 +331,98 @@ export class DFAAutomaton extends AutomatonBase implements DFA {
                 node.addTransition(newState, curTransition[0]);
             }
         }
+        this.minimise();
+        console.log(this.toString());
+    }
+
+    private minimise() {
+        const nodes = this.nodes();
+        const nodeIdxs = new Map<AutomatonNode, number>();
+        {
+            var nbNodes = 0;
+            for (const node of nodes) {
+                nodeIdxs.set(node, nbNodes++);
+                node.sortTransitions();
+            }
+        }
+        var equal: number[][] = new Array();
+        for (var idx = 0; idx < nbNodes; idx++) {
+            var init: number[] = new Array();
+            for (var idx2 = 0; idx2 < nbNodes; idx2++) {
+                init.push(0);
+            }
+            equal.push(init);
+        }
+        for (var idxA = 0; idxA < nodes.length; idxA++) {
+            for (var idxB = 0; idxB < idxA; idxB++) {
+                const nodeA = nodes[idxA];
+                const nodeB = nodes[idxB];
+                if (nodeA.out() !== nodeB.out()) {
+                    equal[idxA][idxB] = -1;
+                }
+            }
+        }
+        var changed = false;
+        do {
+            changed = false;
+            for (var idxA = 0; idxA < nodes.length; idxA++) {
+                for (var idxB = 0; idxB < idxA; idxB++) {
+                    if (equal[idxA][idxB] !== 0) {
+                        continue;
+                    }
+                    const nodeA = nodes[idxA];
+                    const nodeB = nodes[idxB];
+                    const transitionsA = nodeA.transitions();
+                    const transitionsB = nodeB.transitions();
+                    if (transitionsA.length !== transitionsB.length) {
+                        equal[idxA][idxB] = -1;
+                        changed = true;
+                        continue;
+                    }
+                    for (var transIdx = 0; transIdx < transitionsA.length; transIdx++) {
+                        const transitionA = transitionsA[transIdx];
+                        const transitionB = transitionsB[transIdx];
+                        if (transitionA.char !== transitionB.char ||
+                            equal[nodeIdxs.get(transitionA.dest)!][nodeIdxs.get(transitionB.dest)!] !== 0) {
+                            equal[idxA][idxB] = -1;
+                            changed = true;
+                            continue;
+                        }
+                    }
+                }
+            }
+        } while (changed);
+        const nodeMap = new Map<MutableAutomatonNode, MutableAutomatonNode>();
+        var newNodes = new Array<MutableAutomatonNode>();
+        nodeMap.set(nodes[0], nodes[0]);
+        newNodes.push(nodes[0]);
+        for (var idxA = 1; idxA < nodes.length; idxA++) {
+            var origNode = nodes[idxA];
+            var otherNode = nodes[idxA];
+            for (var idxB = 0; idxB < idxA; idxB++) {
+                if (equal[idxA][idxB] === 0) {
+                    otherNode = newNodes[idxB];
+                }
+            }
+            newNodes.push(otherNode);
+            nodeMap.set(origNode, otherNode);
+        }
+        for (const node of nodes) {
+            const transitions = node.mutableTransitions();
+            for (const transition of transitions) {
+                const newNode = nodeMap.get(transition.dest);
+                if (newNode !== transition.dest) {
+                    node.removeTransition(transition);
+                    node.addTransition(newNode!, transition.char);
+                }
+            }
+        }
     }
 
     public match(str: number[], curPos: number = 0): [number, number] | undefined | EOF {
         if (curPos == str.length) {
             return new EOF();
         }
-        this.determinise();
         var curNode: AutomatonNode = this.entry;
         var lastRuleMatch: number | undefined = undefined;
         var lastRuleMatchIdx: number = 0;

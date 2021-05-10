@@ -194,7 +194,7 @@ export class RangeNode implements RegexNode {
 
     toString(): string {
         // TODO: Handle special cases
-        return `[${Array.from(this.vals).join()}]`;
+        return `[${Array.from(this.vals).join("")}]`;
     }
     getNFA(idxGen: Sequence): [MutableAutomatonNode, MutableAutomatonNode] {
         return [this.entryNode, this.exitNode];
