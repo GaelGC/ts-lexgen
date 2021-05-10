@@ -4,13 +4,13 @@ import { Matcher } from "../../src/Matcher";
 import { getBytes, getString, LitteralNode, RegexNode } from "../../src/RegexNodes";
 import { Lexer, ruleNames } from "./Stage2Lexer";
 import { LexerGenerator } from "../../src/LexerGenerator";
-import { handleChar, handleSpecialChar, pop, unEscape } from "../helpers/CharacterHandlers";
+import { addToRange, handleChar, handleRange, handleSpecialChar, pop, unEscape } from "../helpers/CharacterHandlers";
 
 enum State {
     Initial,
     NameAcquired,
     StateDeclaration,
-    DefinitionOngoing
+    DefinitionOngoing,
 }
 
 class Stage2 extends Lexer {
@@ -34,6 +34,8 @@ var nodes: RegexNode[] = [new LitteralNode("")];
 var opStack: string[] = [];
 var stateName = "INITIAL";
 var eof = false;
+var range = "";
+var rangeRevert = false;
 
 while (!eof) {
     var res = stage2.lex();
@@ -83,9 +85,8 @@ while (!eof) {
         case State.DefinitionOngoing: {
             var c = lexem[1];
             if (lexem[0] === "ESCAPE") {
-                c = unEscape(c);
-            }
-            if (lexem[0] === "SPECIAL") {
+                handleChar(unEscape(c), nodes, opStack);
+            } else if (lexem[0] === "SPECIAL") {
                 handleSpecialChar(c, nodes, opStack);
             } else if (lexem[0] === "NEWLINE") {
                 while (opStack.length !== 0) {
@@ -95,8 +96,27 @@ while (!eof) {
                 outputLexer.registerRule(curName, nodes[0]);
                 nodes = [new LitteralNode("")];
                 curState = State.Initial;
-            } else {
+            } else if (lexem[0] === "RANGESTARTCHAR") {
+                stage2.setState("RANGESTART");
+                range = "";
+                rangeRevert = false;
+            } else if (lexem[0] === "RANGERANGE") {
+                range = addToRange(range, lexem[1][0], lexem[1][2]);
+                stage2.setState("RANGE");
+            } else if (lexem[0] === "RANGENORMAL") {
+                range = addToRange(range, lexem[1][0], lexem[1][0]);
+                stage2.setState("RANGE");
+            } else if (lexem[0] === "RANGEESCAPE") {
+                const c = unEscape(lexem[1]);
+                range = addToRange(range, c, c);
+                stage2.setState("RANGE");
+            } else if (lexem[0] === "RANGEEND") {
+                handleRange(range, rangeRevert, nodes, opStack);
+                stage2.setState("INITIAL");
+            } else if (lexem[0] == "ID") {
                 handleChar(c, nodes, opStack);
+            } else {
+                throw Error(`Unknown state ${lexem[0]}`);
             }
             break;
         }

@@ -31,6 +31,10 @@ export abstract class Lexer {
     buffer: number[] = new Array();
     abstract getBytes(): number[];
 
+    setState(name: string) {
+        this.currentAutomaton = stateNames.indexOf(name);
+    }
+
     getRuleNames(): string[] {
         return ruleNames[this.currentAutomaton];
     }

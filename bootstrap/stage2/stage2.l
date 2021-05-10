@@ -2,23 +2,24 @@ ID=>(A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z|a|b|c|d|e|f|g|h|i|j|k|l
 NEWLINE=>\r?\n
 SEPARATOR=>\=\>
 STATE=>\>
-ESCAPE=>\\(n|r|\\|\.|\?|\(|\)|\||\*|\+|\=|\>)
+ESCAPE=>\\(n|r|\\|\.|\?|\(|\)|\||\*|\+|\=|\>|[)
 SPECIAL=>\\|\.|\?|\(|\)|\||\*|\+|\=|\>
+RANGESTARTCHAR=>[
 
 >RANGESTART
-EXCLUDE=>^
-MINUS=>-
-NORMAL=>.
-ESCAPE=>\\.
-RANGE=>.-.
+RANGEEXCLUDE=>^
+RANGEMINUS=>-
+RANGENORMAL=>.
+RANGEESCAPE=>\\(n|r|\\|\.|\?|\(|\)|\||\*|\+|\=|\>|[)
+RANGERANGE=>.-.
 
 >RANGEEXCLUDESTART
-MINUS=>-
-NORMAL=>.
-ESCAPE=>\\.
-RANGE=>.-.
+RANGEMINUS=>-
+RANGENORMAL=>.
+RANGEESCAPE=>\\(n|r|\\|\.|\?|\(|\)|\||\*|\+|\=|\>|[)
+RANGERANGE=>.-.
 
 >RANGE
-END=>]
-RANGE=>.-.
-NORMAL=>.
+RANGEEND=>]
+RANGERANGE=>.-.
+RANGENORMAL=>.

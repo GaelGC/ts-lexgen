@@ -1,4 +1,4 @@
-import { LitteralNode, OptionalNode, OrNode, RangeNode, RegexNode, RepetitionNode, SeqNode, ZeroOrMoreNode } from "../../src/RegexNodes";
+import { getBytes, getString, LitteralNode, OptionalNode, OrNode, RangeNode, RegexNode, RepetitionNode, SeqNode, ZeroOrMoreNode } from "../../src/RegexNodes";
 
 const specials = ".?*+|()";
 var letters = "";
@@ -85,6 +85,10 @@ export function handleChar(c: string, nodes: RegexNode[], opStack: string[]) {
     push('.', new LitteralNode(c), nodes, opStack);
 }
 
+export function handleRange(c: string, reverse: boolean, nodes: RegexNode[], opStack: string[]) {
+    push('.', new RangeNode(c), nodes, opStack);
+}
+
 export function unEscape(c: string) {
     if (c[1] == 'n') {
         return '\n';
@@ -93,4 +97,19 @@ export function unEscape(c: string) {
         return '\r';
     }
     return c[1];
+}
+
+export function addToRange(range: string, start: string, end: string): string {
+    if (start > end) {
+        throw Error(`Invalid range drom ${start} to ${end}`);
+    }
+    const cstart = getBytes(start)[0];
+    const cend = getBytes(end)[0];
+    for (var c = cstart; c <= cend; c++) {
+        const s = getString([c]);
+        if (!range.includes(s)) {
+            range += s;
+        }
+    }
+    return range;
 }
