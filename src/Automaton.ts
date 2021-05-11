@@ -298,6 +298,39 @@ export class DFAAutomaton extends AutomatonBase implements DFA {
     }
 
     private determinise() {
+        const newNodes: MutableAutomatonNode[] = new Array();
+        const oldNodes: Set<AutomatonNode>[] = new Array();
+        const findNode = (nodes: Set<AutomatonNode>): MutableAutomatonNode => {
+            for (var elemIdx = 0; elemIdx < oldNodes.length; elemIdx++) {
+                const node = newNodes[elemIdx];
+                const sourceNodes = oldNodes[elemIdx];
+
+                var equal = true;
+                if (sourceNodes.size !== nodes.size) {
+                    equal = false;
+                }
+                for (const sourceNode of Array.from(sourceNodes.keys())) {
+                    if (!nodes.has(sourceNode)) {
+                        equal = false;
+                    }
+                }
+                if (equal) {
+                    return node;
+                }
+            }
+
+            var minOut = Number.MAX_VALUE;
+            for (const node of Array.from(nodes.keys())) {
+                const out = node.out();
+                if (out !== undefined && out < minOut) {
+                    minOut = out;
+                }
+            }
+            const newNode = new AutomatonNodeBase(this.idxGen, minOut === Number.MAX_VALUE ? undefined : minOut);
+            newNodes.push(newNode);
+            oldNodes.push(nodes);
+            return newNode;
+        }
         while (!this.isDFA()) {
             const node = this.getNonDeterministicNode()!;
             var transitions = new Map<number, MutableAutomatonTransition[]>();
@@ -317,18 +350,16 @@ export class DFAAutomaton extends AutomatonBase implements DFA {
                 if (value.length === 1) {
                     continue;
                 }
-                const newState = new AutomatonNodeBase(this.idxGen);
+                const destinations = new Set<AutomatonNode>();
+                value.forEach(transition => destinations.add(transition.dest));
+                const newState = findNode(destinations);
                 for (const nextPossibleState of value) {
+                    node.removeTransition(nextPossibleState);
                     for (const nextPossibleStateTransition of nextPossibleState.dest.mutableTransitions()) {
                         newState.addTransition(nextPossibleStateTransition.dest, nextPossibleStateTransition.char);
                     }
-                    if (nextPossibleState.dest.out() !== undefined &&
-                        (newState.ruleIdx === undefined || newState.ruleIdx > nextPossibleState.dest.out()!)) {
-                        newState.ruleIdx = nextPossibleState.dest.out();
-                    }
-                    node.removeTransition(nextPossibleState);
                 }
-                node.addTransition(newState, curTransition[0]);
+                node.addTransition(newState, value[0].char);
             }
         }
         this.minimise();
