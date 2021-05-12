@@ -8,6 +8,7 @@ import { addToRange, handleChar, handleRange, handleSpecialChar, pop, unEscape }
 
 enum State {
     Initial,
+    Stage2,
     NameAcquired,
     StateDeclaration,
     DefinitionOngoing,
@@ -37,9 +38,10 @@ var eof = false;
 var range = "";
 var rangeRevert = false;
 
+var userPreamble = "";
+
 while (!eof) {
     var res = stage2.lex();
-    var lexem: [string, string] = ["NEWLINE", "\n"];
     if (res === undefined) {
         console.log("Error");
         break;
@@ -47,10 +49,24 @@ while (!eof) {
         eof = true;
         break;
     }
-    lexem = [stage2.getRuleNames()[res[0]], getString(res[1])];
+    var lexem: [typeof res[0], string] = [res[0], getString(res[1])];
     console.log(`Rule ${lexem[0]} reached with string ${lexem[1]}`);
     switch (curState) {
         case State.Initial: {
+            if (lexem[0] === "STAGE1END") {
+                stage2.setState("STAGE2");
+                curState = State.Stage2;
+            } else if (lexem[0] === "STAGE1CODESTART") {
+                stage2.setState("STAGE1CODE");
+            } else if (lexem[0] === "STAGE1CODEEND") {
+                console.log(userPreamble);
+                stage2.setState("INITIAL");
+            } else if (lexem[0] === "STAGE1CODE") {
+                userPreamble +=  lexem[1];
+            }
+            break;
+        }
+        case State.Stage2: {
             console.log(lexem[1]);
             if (lexem[0] !== "NEWLINE" && lexem[0] !== "ID" && lexem[0] !== "STATE") {
                 throw Error(`Unexpected ${lexem[0]} at beginning of line.`);
@@ -78,7 +94,7 @@ while (!eof) {
                 outputLexer = new Matcher();
             }
             if (lexem[0] === "NEWLINE") {
-                curState = State.Initial;
+                curState = State.Stage2;
             }
             break;
         }
@@ -95,7 +111,7 @@ while (!eof) {
                 console.log(`Registering rule ${curName} with content ${nodes[0].toString()}`);
                 outputLexer.registerRule(curName, nodes[0]);
                 nodes = [new LitteralNode("")];
-                curState = State.Initial;
+                curState = State.Stage2;
             } else if (lexem[0] === "RANGESTARTCHAR") {
                 stage2.setState("RANGESTART");
                 range = "";
@@ -112,7 +128,7 @@ while (!eof) {
                 stage2.setState("RANGE");
             } else if (lexem[0] === "RANGEEND") {
                 handleRange(range, rangeRevert, nodes, opStack);
-                stage2.setState("INITIAL");
+                stage2.setState("STAGE2");
             } else if (lexem[0] == "ID") {
                 handleChar(c, nodes, opStack);
             } else {

@@ -42,16 +42,19 @@ export class LexerGenerator {
         var stateNames: string[] = new Array();
         var ruleNames: string[] = new Array();
         var automata: string[] = new Array();
+        var resTypes: Set<string> = new Set();
         for (const stateName of Array.from(this.matchers.keys())) {
             const stateData = this.matchers.get(stateName)!.compile();
             stateNames.push(`"${stateName}"`);
-            ruleNames.push(`[${stateData.rules}]`);
+            ruleNames.push(`[${stateData.rules.join(", ")}]`);
+            stateData.rules.forEach(x => resTypes.add(x));
             automata.push(stateData.automaton);
         }
         return render(skeleton, {
             automata: automata.join(", "),
             names: ruleNames.join(", "),
             states: stateNames.join(", "),
+            resTypes: Array.from(resTypes).join(" | "),
             libDir: libDir
         });
     }

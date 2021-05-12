@@ -35,11 +35,8 @@ export abstract class Lexer {
         this.currentAutomaton = stateNames.indexOf(name);
     }
 
-    getRuleNames(): string[] {
-        return ruleNames[this.currentAutomaton];
-    }
-
-    public lex(): EOF | undefined | [number, number[]] {
+    public lex(): EOF | undefined | [{{resTypes}}, number[]];
+    public lex(): EOF | undefined | [string, number[]] {
         if (this.buffer.length === 0) {
             this.buffer = this.getBytes();
             if (this.buffer.length === 0) {
@@ -72,6 +69,6 @@ export abstract class Lexer {
             return undefined;
         }
         const matchBytes = this.buffer.splice(0, lastRuleMatchIdx + 1);
-        return [lastRuleMatch, matchBytes];
+        return [ruleNames[this.currentAutomaton][lastRuleMatch], matchBytes];
     }
 }

@@ -30,12 +30,12 @@ export class Matcher {
         this.rules.push(new Rule(name, nfaNode[0], nfaNode[1], this.rules.length));
     }
 
-    public compile(): { rules: string, automaton: string } {
+    public compile(): { rules: string[], automaton: string } {
         const enfa = new EpsilonNFAAutomaton(new Sequence(), ...this.rules.map(x => x.node));
         const nfa = enfa.getNFA();
         this.root = nfa.getDFA();
         return {
-            rules: this.rules.map(rule => `"${rule.name}"`).join(", "),
+            rules: this.rules.map(rule => `"${rule.name}"`),
             automaton: this.root.getTables()
         }
     }
