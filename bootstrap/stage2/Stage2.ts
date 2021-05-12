@@ -140,7 +140,7 @@ while (!eof) {
 }
 
 generator.addStateMatcher(stateName, outputLexer);
-const code = generator.compile("../../src/");
+const code = generator.compile("../../src/", userPreamble);
 
 fs.writeFileSync("./bootstrap/stage3/Stage3Lexer.ts", code);
 

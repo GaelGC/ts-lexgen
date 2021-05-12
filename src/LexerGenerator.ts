@@ -34,7 +34,7 @@ export class LexerGenerator {
         this.currentMatcher = this.matchers.get(name);
     }
 
-    public compile(libDir?: string): string {
+    public compile(libDir?: string, preamble?: string): string {
         if (libDir === undefined) {
             libDir = "";
         }
@@ -55,7 +55,8 @@ export class LexerGenerator {
             names: ruleNames.join(", "),
             states: stateNames.join(", "),
             resTypes: Array.from(resTypes).join(" | "),
-            libDir: libDir
+            libDir: libDir,
+            preamble: preamble === undefined ? "" : preamble
         });
     }
 }

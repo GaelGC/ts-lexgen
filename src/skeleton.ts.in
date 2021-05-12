@@ -1,6 +1,8 @@
 import { EOF } from "{{ libDir }}Automaton";
 import { getBytes } from "{{ libDir }}RegexNodes";
 
+{{preamble}}
+
 class AutomatonData {
     constructor(nextState: number[][], accept: number[],
         nextAutomaton: Map<number, number>) {
