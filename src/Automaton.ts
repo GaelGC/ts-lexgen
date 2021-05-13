@@ -101,7 +101,9 @@ export class AutomatonNodeBase implements AutomatonNode, MutableAutomatonNode {
     }
 
     public addTransition(dest: MutableAutomatonNode, char: number | null) {
-        this.outputs.push(new MutableAutomatonTransition(dest, char));
+        if (this.outputs.find(x => x.char === char && x.dest === dest) === undefined) {
+            this.outputs.push(new MutableAutomatonTransition(dest, char));
+        }
     }
 
     removeTransition(transition: MutableAutomatonTransition) {
@@ -114,6 +116,9 @@ export class AutomatonNodeBase implements AutomatonNode, MutableAutomatonNode {
 
     toString(): string {
         var str = `${this.nodeIdx} [shape="${this.ruleIdx !== undefined ? "doublecircle" : "circle"}"]`;
+        if (this.out() != undefined) {
+            str += `${this.nodeIdx} [label="${this.nodeIdx}(${this.out()})"]`;
+        }
         for (const neighbor of this.neighbors()) {
             const transitions = this.transitions().filter(x => x.dest === neighbor)!;
             var chars = "";
@@ -122,6 +127,7 @@ export class AutomatonNodeBase implements AutomatonNode, MutableAutomatonNode {
                     str = str.replace(/\n/g, "\\n");
                     str = str.replace(/\r/g, "\\r");
                     str = str.replace(/\\/g, "\\\\");
+                    str = str.replace(/"/g, "\\\"");
                     return str;
                 }
                 chars += transition.char === null ? "ϵ" : handleSpecials(String.fromCharCode(transition.char));
@@ -298,68 +304,59 @@ export class DFAAutomaton extends AutomatonBase implements DFA {
     }
 
     private determinise() {
-        const newNodes: MutableAutomatonNode[] = new Array();
-        const oldNodes: Set<AutomatonNode>[] = new Array();
-        const findNode = (nodes: Set<AutomatonNode>): MutableAutomatonNode => {
-            for (var elemIdx = 0; elemIdx < oldNodes.length; elemIdx++) {
-                const node = newNodes[elemIdx];
-                const sourceNodes = oldNodes[elemIdx];
-
-                var equal = true;
-                if (sourceNodes.size !== nodes.size) {
-                    equal = false;
-                }
-                for (const sourceNode of Array.from(sourceNodes.keys())) {
-                    if (!nodes.has(sourceNode)) {
-                        equal = false;
-                    }
-                }
-                if (equal) {
-                    return node;
-                }
+        var nameToNode: Map<string, MutableAutomatonNode> = new Map();
+        var nodeToName: Map<MutableAutomatonNode, string> = new Map();
+        var nodes: Array<MutableAutomatonNode> = new Array();
+        const getCombNode = (names: string[]): MutableAutomatonNode => {
+            names = names.join("|").split("|").sort();
+            const name = names.join("|");
+            if (nameToNode.has(name)) {
+                return nameToNode.get(name)!;
             }
-
-            var minOut = Number.MAX_VALUE;
-            for (const node of Array.from(nodes.keys())) {
-                const out = node.out();
-                if (out !== undefined && out < minOut) {
-                    minOut = out;
+            const node = new AutomatonNodeBase(this.idxGen);
+            var ruleIdx: number | undefined = undefined;
+            names.forEach(x => {
+                var otherNode = getCombNode([x]);
+                if (otherNode.out() !== undefined && (ruleIdx === undefined || ruleIdx > otherNode.out()!)) {
+                    ruleIdx = otherNode.out();
                 }
+                for (const transition of otherNode.mutableTransitions()) {
+                    node.addTransition(transition.dest, transition.char);
+                }
+            });
+            if (ruleIdx !== undefined) {
+                node.setOut(ruleIdx);
             }
-            const newNode = new AutomatonNodeBase(this.idxGen, minOut === Number.MAX_VALUE ? undefined : minOut);
-            newNodes.push(newNode);
-            oldNodes.push(nodes);
-            return newNode;
+            nameToNode.set(name, node);
+            nodeToName.set(node, name);
+            nodes.push(node);
+            return node;
         }
-        while (!this.isDFA()) {
-            const node = this.getNonDeterministicNode()!;
-            var transitions = new Map<number, MutableAutomatonTransition[]>();
-            for (const transition of node.mutableTransitions()) {
-                if (transition.char === null) {
-                    throw Error("Should not be called on an automata with spontaneous transitions");
+        this.nodes().forEach(node => {
+            nameToNode.set(node.idx().toString(), node);
+            nodeToName.set(node, node.idx().toString());
+            nodes.push(node);
+        });
+        for (var nodeIdx = 0; nodeIdx < nodes.length; nodeIdx++) {
+            const curNode = nodes[nodeIdx];
+            //const sourceNodes = nodeToName.get(curNode)!.split("|").map(name => nameToNode.get(name)!);
+            const transitionToNode = new Map<MutableAutomatonTransition, MutableAutomatonNode>();
+            var dest = new Map<number, MutableAutomatonTransition[]>();
+            for (const transition of curNode.mutableTransitions()) {
+                if (!dest.has(transition.char!)) {
+                    dest.set(transition.char!, new Array());
                 }
-                if (!transitions.has(transition.char)) {
-                    transitions.set(transition.char, new Array());
-                }
-                transitions.get(transition.char)!.push(transition);
+                dest.get(transition.char!)?.push(transition);
+                transitionToNode.set(transition, curNode);
             }
-            var transitionIterator = Array.from(transitions.entries());
-
-            for (const curTransition of transitionIterator) {
-                const [key, value] = curTransition;
-                if (value.length === 1) {
+            for (const [char, destinations] of Array.from(dest)) {
+                if (destinations.length === 1) {
                     continue;
                 }
-                const destinations = new Set<AutomatonNode>();
-                value.forEach(transition => destinations.add(transition.dest));
-                const newState = findNode(destinations);
-                for (const nextPossibleState of value) {
-                    node.removeTransition(nextPossibleState);
-                    for (const nextPossibleStateTransition of nextPossibleState.dest.mutableTransitions()) {
-                        newState.addTransition(nextPossibleStateTransition.dest, nextPossibleStateTransition.char);
-                    }
+                curNode.addTransition(getCombNode(destinations.map(x => nodeToName.get(x.dest)!)), char);
+                for (const transition of destinations) {
+                    transitionToNode.get(transition)!.removeTransition(transition);
                 }
-                node.addTransition(newState, value[0].char);
             }
         }
         this.minimise();
