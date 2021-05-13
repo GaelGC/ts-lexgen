@@ -1,7 +1,7 @@
-import { EOF } from "{{ libDir }}Automaton";
-import { getBytes } from "{{ libDir }}RegexNodes";
+import { EOF } from "<%- libDir %>Automaton";
+import { getBytes } from "<%- libDir %>RegexNodes";
 
-{{preamble}}
+<%- preamble %>
 
 class AutomatonData {
     constructor(nextState: number[][], accept: number[],
@@ -20,11 +20,11 @@ class AutomatonData {
 }
 
 const automata = [
-    {{automata}}
+    <%- automata %>
 ];
 
-export const ruleNames: string[][] = [{{names}}];
-export const stateNames: string[] = [{{states}}];
+export const ruleNames: string[][] = [<%- names %>];
+export const stateNames: string[] = [<%- states %>];
 
 export abstract class Lexer {
     constructor() {
@@ -37,7 +37,7 @@ export abstract class Lexer {
         this.currentAutomaton = stateNames.indexOf(name);
     }
 
-    public lex(): EOF | undefined | [{{resTypes}}, number[]];
+    public lex(): EOF | undefined | [<%- resTypes %>, number[]];
     public lex(): EOF | undefined | [string, number[]] {
         if (this.buffer.length === 0) {
             this.buffer = this.getBytes();

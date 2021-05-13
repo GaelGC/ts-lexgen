@@ -1,6 +1,6 @@
 import { EOF } from "./Automaton";
 import { Matcher } from "./Matcher";
-import { render, renderFile } from "template-file";
+import { render, renderFile } from "ejs";
 import fs = require('fs');
 
 export class LexerGenerator {
@@ -46,8 +46,8 @@ export class LexerGenerator {
         for (const stateName of Array.from(this.matchers.keys())) {
             const stateData = this.matchers.get(stateName)!.compile();
             stateNames.push(`"${stateName}"`);
-            ruleNames.push(`[${stateData.rules.join(", ")}]`);
-            stateData.rules.forEach(x => resTypes.add(x));
+            ruleNames.push(`[${stateData.rules.map(rule => `"${rule.name}"`).join(", ")}]`);
+            stateData.rules.forEach(x => resTypes.add(`"${x.name}"`));
             automata.push(stateData.automaton);
         }
         return render(skeleton, {

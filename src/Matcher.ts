@@ -2,16 +2,19 @@ import { Automaton, AutomatonNode, NFA, ENFA, DFA, EOF, EpsilonNFAAutomaton } fr
 import { getBytes, RegexNode, Sequence } from "./RegexNodes";
 
 class Rule {
-    constructor(name: string, nodeEntry: AutomatonNode, nodeExit: AutomatonNode, idx: number) {
+    constructor(name: string, nodeEntry: AutomatonNode, nodeExit: AutomatonNode, idx: number,
+        code?: string) {
         this.name = name;
         this.idx = idx;
         this.node = nodeEntry;
         nodeExit.setOut(idx);
+        this.code = code;
     }
 
     name: string;
     idx: number;
     node: AutomatonNode;
+    code: string | undefined;
 }
 
 export class Matcher {
@@ -24,18 +27,18 @@ export class Matcher {
         this.rules = new Array();
     }
 
-    public registerRule(name: string, node: RegexNode) {
+    public registerRule(name: string, node: RegexNode, code?: string) {
         var nfaNode: [AutomatonNode, AutomatonNode];
         nfaNode = node.getNFA(new Sequence());
         this.rules.push(new Rule(name, nfaNode[0], nfaNode[1], this.rules.length));
     }
 
-    public compile(): { rules: string[], automaton: string } {
+    public compile(): { rules: Rule[], automaton: string } {
         const enfa = new EpsilonNFAAutomaton(new Sequence(), ...this.rules.map(x => x.node));
         const nfa = enfa.getNFA();
         this.root = nfa.getDFA();
         return {
-            rules: this.rules.map(rule => `"${rule.name}"`),
+            rules: this.rules,
             automaton: this.root.getTables()
         }
     }
