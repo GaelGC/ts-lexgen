@@ -12,8 +12,9 @@ NEWLINE=>\r?\n
 SEPARATOR=>\=\>
 STATE=>\>
 ESCAPE=>\\(n|r|\\|\.|\?|\(|\)|\||\*|\+|\=|\>|[)
-SPECIAL=>\\|\.|\?|\(|\)|\||\*|\+|\=|\>
+SPECIAL=>\\|\.|\?|\(|\)|\||\*|\+|\=|\>|\"
 RANGESTARTCHAR=>[
+LITTERAL=>\".+\"
 
 >RANGESTART
 RANGEEXCLUDE=>^

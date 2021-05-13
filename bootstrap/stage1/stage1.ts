@@ -14,7 +14,7 @@ import { handleChar, handleSpecialChar, pop, unEscape } from "../helpers/Charact
 import { getBytes, getString, LitteralNode, OptionalNode, OrNode, RangeNode, RegexNode, RepetitionNode, SeqNode, ZeroOrMoreNode } from "../../src/RegexNodes";
 
 const matcher = new Matcher();
-const special = "\\\n\r.?()|*+=>";
+const special = "\\\n\r.?()|*+=>\"";
 var letters = "";
 for (var x = 0; x < 128; x++) {
     const str = getString([x]);
@@ -24,6 +24,8 @@ for (var x = 0; x < 128; x++) {
 }
 const separator = "=>";
 
+matcher.registerRule("litteral", new SeqNode(new LitteralNode("\""), new RepetitionNode(new RangeNode(letters)),
+                                             new LitteralNode("\"")));
 matcher.registerRule("escape", new SeqNode(new LitteralNode("\\"), new RangeNode(letters + special)));
 matcher.registerRule("separator", new LitteralNode(separator));
 matcher.registerRule("newline", new SeqNode(new OptionalNode(new LitteralNode("\r")), new LitteralNode("\n")));
@@ -105,6 +107,9 @@ while (!eof) {
                 outputLexer.registerRule(curName, nodes[0]);
                 nodes = [new LitteralNode("")];
                 curState = State.Initial;
+            } else if (res[0] === "litteral") {
+                c = c.slice(1, c.length - 1);
+                handleChar(c, nodes, opStack);
             } else {
                 handleChar(c, nodes, opStack);
             }

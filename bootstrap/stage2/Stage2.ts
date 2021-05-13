@@ -129,8 +129,10 @@ while (!eof) {
             } else if (lexem[0] === "RANGEEND") {
                 handleRange(range, rangeRevert, nodes, opStack);
                 stage2.setState("STAGE2");
-            } else if (lexem[0] == "ID") {
+            } else if (lexem[0] === "ID") {
                 handleChar(c, nodes, opStack);
+            } else if (lexem[0] === "LITTERAL") {
+                handleChar(c.slice(1, c.length - 1), nodes, opStack);
             } else {
                 throw Error(`Unknown state ${lexem[0]}`);
             }
