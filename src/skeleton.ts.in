@@ -1,5 +1,5 @@
 import { EOF } from "<%- libDir %>Automaton";
-import { getBytes } from "<%- libDir %>RegexNodes";
+import { getString } from "<%- libDir %>RegexNodes";
 
 <%- preamble %>
 
@@ -22,6 +22,12 @@ class AutomatonData {
 const automata = [
     <%- automata %>
 ];
+
+<% for (const [automatonName, defs] of codes) {
+       for (const [ruleName, code] of defs) {-%>
+<%- `const ${automatonName}$${ruleName} = (str: string, lexer: Lexer) => ${code};` %>
+<%     }
+   } %>
 
 export const ruleNames: string[][] = [<%- names %>];
 export const stateNames: string[] = [<%- states %>];
@@ -71,6 +77,20 @@ export abstract class Lexer {
             return undefined;
         }
         const matchBytes = this.buffer.splice(0, lastRuleMatchIdx + 1);
+
+        switch (stateNames[this.currentAutomaton]) {
+<%for (const [automatonName, defs] of codes.filter(x => x[1].length !== 0)) {%>
+            case "<%-automatonName%>": {
+<%    for (const [ruleName, _] of defs) {-%>
+                if (ruleNames[this.currentAutomaton][lastRuleMatch] === "<%-ruleName%>") {
+                    <%-`${automatonName}$${ruleName}`%>(getString(matchBytes), this);
+                }
+<%    }-%>
+                break;
+            }
+<%}-%>
+        }
+
         return [ruleNames[this.currentAutomaton][lastRuleMatch], matchBytes];
     }
 }

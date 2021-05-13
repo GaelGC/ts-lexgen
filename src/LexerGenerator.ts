@@ -43,12 +43,15 @@ export class LexerGenerator {
         var ruleNames: string[] = new Array();
         var automata: string[] = new Array();
         var resTypes: Set<string> = new Set();
+        var codes: [string, [string, string][]][] = new Array();
         for (const stateName of Array.from(this.matchers.keys())) {
             const stateData = this.matchers.get(stateName)!.compile();
             stateNames.push(`"${stateName}"`);
             ruleNames.push(`[${stateData.rules.map(rule => `"${rule.name}"`).join(", ")}]`);
             stateData.rules.forEach(x => resTypes.add(`"${x.name}"`));
             automata.push(stateData.automaton);
+            const codeBuf: [string, string][] = stateData.rules.filter(x => x.code !== undefined).map(x => [x.name, x.code!]);
+            codes.push([stateName, codeBuf]);
         }
         return render(skeleton, {
             automata: automata.join(", "),
@@ -56,7 +59,8 @@ export class LexerGenerator {
             states: stateNames.join(", "),
             resTypes: Array.from(resTypes).join(" | "),
             libDir: libDir,
-            preamble: preamble === undefined ? "" : preamble
+            preamble: preamble === undefined ? "" : preamble,
+            codes: codes
         });
     }
 }

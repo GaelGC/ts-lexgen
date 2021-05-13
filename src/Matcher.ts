@@ -30,7 +30,7 @@ export class Matcher {
     public registerRule(name: string, node: RegexNode, code?: string) {
         var nfaNode: [AutomatonNode, AutomatonNode];
         nfaNode = node.getNFA(new Sequence());
-        this.rules.push(new Rule(name, nfaNode[0], nfaNode[1], this.rules.length));
+        this.rules.push(new Rule(name, nfaNode[0], nfaNode[1], this.rules.length, code));
     }
 
     public compile(): { rules: Rule[], automaton: string } {
