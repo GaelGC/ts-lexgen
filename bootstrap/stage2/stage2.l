@@ -15,6 +15,11 @@ ESCAPE=>\\(n|r|\\|\.|\?|\(|\)|\||\*|\+|\=|\>|[)
 SPECIAL=>\\|\.|\?|\(|\)|\||\*|\+|\=|\>|\"
 RANGESTARTCHAR=>[
 LITTERAL=>\".+\"
+CODESTART=>(" "|\t)+
+
+>STAGE2CODE
+NEWLINE=>\r?\n
+STAGE2CODE=>.+
 
 >RANGESTART
 RANGEEXCLUDE=>^

@@ -12,6 +12,7 @@ enum State {
     NameAcquired,
     StateDeclaration,
     DefinitionOngoing,
+    Stage2Code
 }
 
 class Stage2 extends Lexer {
@@ -40,6 +41,19 @@ var rangeRevert = false;
 
 var userPreamble = "";
 
+var isCodeBlock = false;
+var userCode = "";
+
+const registerRule = (code?: string) => {
+    while (opStack.length !== 0) {
+        pop(nodes, opStack);
+    }
+    console.log(`Registering rule ${curName} with content ${nodes[0].toString()}`);
+    outputLexer.registerRule(curName, nodes[0], code);
+    nodes = [new LitteralNode("")];
+    curState = State.Stage2;
+}
+
 while (!eof) {
     var res = stage2.lex();
     if (res === undefined) {
@@ -62,7 +76,7 @@ while (!eof) {
                 console.log(userPreamble);
                 stage2.setState("INITIAL");
             } else if (lexem[0] === "STAGE1CODE") {
-                userPreamble +=  lexem[1];
+                userPreamble += lexem[1];
             }
             break;
         }
@@ -100,18 +114,16 @@ while (!eof) {
         }
         case State.DefinitionOngoing: {
             var c = lexem[1];
-            if (lexem[0] === "ESCAPE") {
+            if (lexem[0] === "CODESTART") {
+                isCodeBlock = false;
+                stage2.setState("STAGE2CODE");
+                curState = State.Stage2Code;
+            } else if (lexem[0] === "NEWLINE") {
+                registerRule();
+            } else if (lexem[0] === "ESCAPE") {
                 handleChar(unEscape(c), nodes, opStack);
             } else if (lexem[0] === "SPECIAL") {
                 handleSpecialChar(c, nodes, opStack);
-            } else if (lexem[0] === "NEWLINE") {
-                while (opStack.length !== 0) {
-                    pop(nodes, opStack);
-                }
-                console.log(`Registering rule ${curName} with content ${nodes[0].toString()}`);
-                outputLexer.registerRule(curName, nodes[0]);
-                nodes = [new LitteralNode("")];
-                curState = State.Stage2;
             } else if (lexem[0] === "RANGESTARTCHAR") {
                 stage2.setState("RANGESTART");
                 range = "";
@@ -135,6 +147,16 @@ while (!eof) {
                 handleChar(c.slice(1, c.length - 1), nodes, opStack);
             } else {
                 throw Error(`Unknown state ${lexem[0]}`);
+            }
+            break;
+        }
+        case State.Stage2Code: {
+            if (lexem[0] === "STAGE2CODE") {
+                userCode += lexem[1];
+            } else if (lexem[0] === "NEWLINE") {
+                registerRule(userCode);
+                curState = State.Stage2;
+                stage2.setState("STAGE2");
             }
             break;
         }
