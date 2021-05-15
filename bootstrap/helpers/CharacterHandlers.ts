@@ -86,7 +86,7 @@ export function handleChar(c: string, nodes: RegexNode[], opStack: string[]) {
 }
 
 export function handleRange(c: string, reverse: boolean, nodes: RegexNode[], opStack: string[]) {
-    push('.', new RangeNode(c), nodes, opStack);
+    push('.', new RangeNode(c, reverse), nodes, opStack);
 }
 
 export function unEscape(c: string) {

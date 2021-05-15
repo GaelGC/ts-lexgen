@@ -134,6 +134,12 @@ while (!eof) {
             } else if (lexem[0] === "RANGENORMAL") {
                 range = addToRange(range, lexem[1][0], lexem[1][0]);
                 stage2.setState("RANGE");
+            } else if (lexem[0] === "RANGEMINUS") {
+                range = addToRange(range, "-", "-");
+                stage2.setState("RANGE");
+            } else if (lexem[0] == "RANGEEXCLUDE") {
+                stage2.setState("RANGE");
+                rangeRevert = true;
             } else if (lexem[0] === "RANGEESCAPE") {
                 const c = unEscape(lexem[1]);
                 range = addToRange(range, c, c);

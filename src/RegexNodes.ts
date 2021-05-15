@@ -168,23 +168,26 @@ export class ZeroOrMoreNode implements RegexNode {
 }
 
 export class RangeNode implements RegexNode {
-    constructor(vals: string) {
+    constructor(vals: string, reverse: boolean = false) {
         this.entryNode = new AutomatonNodeBase();
         this.exitNode = new AutomatonNodeBase();
+        var rangeNumbers: number[] = new Array();
         for (const c of vals) {
             const bytes = getBytes(c);
             if (bytes.length === 1) {
-                this.entryNode.addTransition(this.exitNode, bytes[0]);
+                rangeNumbers.push(bytes[0]);
             } else {
-                var prevNode = this.entryNode;
-                for (const byte of bytes) {
-                    const node = new AutomatonNodeBase();
-                    prevNode.addTransition(node, byte);
-                    prevNode = node;
-                }
-                prevNode.addTransition(this.exitNode, null);
+                throw new Error("Range currently do not support unicode.");
             }
         }
+        if (reverse) {
+            const reverseRangeNumbers: number[] = new Array();
+            for (var x = 0; x < 128; x++) {
+                reverseRangeNumbers.push(x);
+            }
+            rangeNumbers = reverseRangeNumbers.filter(x => !rangeNumbers.includes(x));
+        }
+        rangeNumbers.forEach(c => this.entryNode.addTransition(this.exitNode, c));
         this.vals = vals;
     }
 
