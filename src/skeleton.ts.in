@@ -30,7 +30,7 @@ const automata = [
    } %>
 
 export const ruleNames: string[][] = [<%- names %>];
-export const stateNames: string[] = [<%- states %>];
+export const stateNames: string[] = [<%- states.join(", ") %>];
 
 export abstract class Lexer {
     constructor() {
@@ -39,7 +39,7 @@ export abstract class Lexer {
     buffer: number[] = new Array();
     abstract getBytes(): number[];
 
-    setState(name: string) {
+    setState(name: <%- states.join(" | ") %>) {
         this.currentAutomaton = stateNames.indexOf(name);
     }
 

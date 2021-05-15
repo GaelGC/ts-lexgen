@@ -56,7 +56,7 @@ export class LexerGenerator {
         return render(skeleton, {
             automata: automata.join(", "),
             names: ruleNames.join(", "),
-            states: stateNames.join(", "),
+            states: stateNames,
             resTypes: Array.from(resTypes).join(" | "),
             libDir: libDir,
             preamble: preamble === undefined ? "" : preamble,
