@@ -58,7 +58,7 @@ while (!eof) {
     var res = stage2.lex();
     if (res === undefined) {
         console.log("Error");
-        break;
+        process.exit(1);
     } else if (res instanceof EOF) {
         eof = true;
         break;

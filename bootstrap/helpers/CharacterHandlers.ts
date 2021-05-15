@@ -96,6 +96,9 @@ export function unEscape(c: string) {
     if (c[1] == 'r') {
         return '\r';
     }
+    if (c[1] == 't') {
+        return '\t';
+    }
     return c[1];
 }
 

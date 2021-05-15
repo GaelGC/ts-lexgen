@@ -14,7 +14,7 @@ import { handleChar, handleSpecialChar, pop, unEscape } from "../helpers/Charact
 import { getBytes, getString, LitteralNode, OptionalNode, OrNode, RangeNode, RegexNode, RepetitionNode, SeqNode, ZeroOrMoreNode } from "../../src/RegexNodes";
 
 const matcher = new Matcher();
-const special = "\\\n\r.?()|*+=>\"";
+const special = "\\\n\r\t.?()|*+=>\"[";
 var letters = "";
 for (var x = 0; x < 128; x++) {
     const str = getString([x]);
