@@ -22,7 +22,7 @@ class Stage2 extends Lexer {
             return [];
         }
         this.sent = true;
-        return getBytes(fs.readFileSync("./bootstrap/stage3/stage3.l").toString());
+        return getBytes(fs.readFileSync("./bootstrap/stage2/stage3.l").toString());
     }
 }
 

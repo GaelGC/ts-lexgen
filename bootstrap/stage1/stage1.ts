@@ -48,7 +48,7 @@ var opStack: string[] = [];
 var stateName = "INITIAL";
 const generator = new LexerGenerator();
 var pos = 0;
-var bytes = getBytes(fs.readFileSync("./bootstrap/stage2/stage2.l").toString());
+var bytes = getBytes(fs.readFileSync("./bootstrap/stage1/stage2.l").toString());
 var eof = false;
 while (!eof) {
     var res = matcher.match(bytes, pos);
