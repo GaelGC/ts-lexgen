@@ -43,6 +43,7 @@ var userPreamble = "";
 
 var isCodeBlock = false;
 var userCode = "";
+var codeLevel = 1;
 
 const registerRule = (code?: string) => {
     while (opStack.length !== 0) {
@@ -115,7 +116,8 @@ while (!eof) {
         case State.DefinitionOngoing: {
             var c = lexem[1];
             if (lexem[0] === "CODESTART") {
-                isCodeBlock = false;
+                isCodeBlock = lexem[1].includes('{');
+                codeLevel = 1;
                 stage2.setState("STAGE2CODE");
                 curState = State.Stage2Code;
             } else if (lexem[0] === "NEWLINE") {
@@ -159,10 +161,26 @@ while (!eof) {
         case State.Stage2Code: {
             if (lexem[0] === "STAGE2CODE") {
                 userCode += lexem[1];
-            } else if (lexem[0] === "NEWLINE") {
+            } else if (lexem[0] === "NEWLINE" && !isCodeBlock) {
                 registerRule(userCode);
+                userCode = "";
                 curState = State.Stage2;
                 stage2.setState("STAGE2");
+            } else if (lexem[0] === "NEWLINE") {
+                userCode += lexem[1];
+            } else if (lexem[0] === "CURLYOPEN") {
+                codeLevel++;
+                userCode += '{'
+            } else if (lexem[0] === "CURLYCLOSE") {
+                if (isCodeBlock && codeLevel == 1) {
+                    registerRule(userCode);
+                    userCode = "";
+                    curState = State.Stage2;
+                    stage2.setState("STAGE2");
+                } else {
+                    codeLevel--;
+                    userCode += '}';
+                }
             }
             break;
         }
