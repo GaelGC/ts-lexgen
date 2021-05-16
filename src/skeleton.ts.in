@@ -25,9 +25,11 @@ const automata = [
 
 <% for (const [automatonName, defs] of codes) {
        for (const [ruleName, code] of defs) {-%>
-<%- `const ${automatonName}$${ruleName} = (str: string, lexer: Lexer) => ${code};` %>
-<%     }
-   } %>
+<%- `const ${automatonName}$${ruleName} = (str: string, lexer: Lexer) => {
+    ${code}` -%>
+}
+<%     }%>
+<%}%>
 
 export const ruleNames: string[][] = [<%- names %>];
 export const stateNames: string[] = [<%- states.join(", ") %>];
@@ -59,6 +61,7 @@ export abstract class Lexer {
 
     public lex(): EOF | undefined | [<%- resTypes %>, number[]];
     public lex(): EOF | undefined | [string, number[]] {
+        const currentAutomaton = this.currentAutomaton;
         if (this.buffer.length === 0) {
             this.buffer = this.getBytes();
             if (this.buffer.length === 0) {
@@ -70,7 +73,7 @@ export abstract class Lexer {
         var lastRuleMatch: number | undefined = undefined;
         var lastRuleMatchIdx = 0;
 
-        const automaton = automata[this.currentAutomaton];
+        const automaton = automata[currentAutomaton];
         while (pos !== this.buffer.length) {
             const nextState = automaton.nextAutomaton;
             const edge = automaton.nextState[curNode][this.buffer[pos]];
@@ -92,11 +95,11 @@ export abstract class Lexer {
         }
         const matchBytes = this.buffer.splice(0, lastRuleMatchIdx + 1);
 
-        switch (stateNames[this.currentAutomaton]) {
+        switch (stateNames[currentAutomaton]) {
 <%for (const [automatonName, defs] of codes.filter(x => x[1].length !== 0)) {%>
             case "<%-automatonName%>": {
 <%    for (const [ruleName, _] of defs) {-%>
-                if (ruleNames[this.currentAutomaton][lastRuleMatch] === "<%-ruleName%>") {
+                if (ruleNames[currentAutomaton][lastRuleMatch] === "<%-ruleName%>") {
                     <%-`${automatonName}$${ruleName}`%>(getString(matchBytes), this);
                 }
 <%    }-%>
@@ -105,6 +108,6 @@ export abstract class Lexer {
 <%}-%>
         }
 
-        return [ruleNames[this.currentAutomaton][lastRuleMatch], matchBytes];
+        return [ruleNames[currentAutomaton][lastRuleMatch], matchBytes];
     }
 }
